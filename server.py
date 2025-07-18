@@ -36,5 +36,5 @@ def submit_form():
         write_to_csv(data)
         return redirect('/thankyou.html')
     else:
-      return 'Something went wrong'
+      return 'Something went wrong!'
 

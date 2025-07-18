@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oracle Autonomous Database with ORM Stack | Vili Tajnic</title>
+    <meta name="description" content="A chill guide to building Oracle Autonomous Database infrastructure with ORM Stack - Complete with GitHub repo and step-by-step usage">
+    <meta name="keywords" content="Oracle Cloud, ORM Stack, Resource Manager, Autonomous Database, GitHub, Tutorial">
+    <meta name="author" content="Vili Tajnic">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Cool, relaxed color palette inspired by the artwork */
+            --primary-teal: #2DD4BF;
+            --deep-teal: #0F766E;
+            --sage-green: #84CC16;
+            --warm-amber: #F59E0B;
+            --soft-orange: #FB923C;
+            --muted-blue: #60A5FA;
+            --lavender: #A78BFA;
+            --warm-gray: #64748B;
+            --cool-gray: #475569;
+            --light-gray: #F1F5F9;
+            --cream: #FFFBEB;
+            --charcoal: #1E293B;
+
+            /* Semantic colors */
+            --primary-color: var(--deep-teal);
+            --secondary-color: var(--sage-green);
+            --accent-color: var(--warm-amber);
+            --text-primary: var(--charcoal);
+            --text-secondary: var(--cool-gray);
+            --text-light: var(--warm-gray);
+            --bg-primary: #FFFFFF;
+            --bg-secondary: var(--light-gray);
+            --bg-accent: var(--cream);
+            --border-color: #E2E8F0;
+
+            /* Relaxed gradients */
+            --primary-gradient: linear-gradient(135deg, var(--primary-teal) 0%, var(--sage-green) 100%);
+            --warm-gradient: linear-gradient(135deg, var(--warm-amber) 0%, var(--soft-orange) 100%);
+            --cool-gradient: linear-gradient(135deg, var(--muted-blue) 0%, var(--lavender) 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Relaxed, friendly header */
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 4rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZG90cyIgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48Y2lyY2xlIGN4PSI0MCIgY3k9IjQwIiByPSIyIiBmaWxsPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMSkiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZG90cykiLz48L3N2Zz4=') repeat;
+            opacity: 0.1;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            letter-spacing: -0.02em;
+        }
+
+        .header .subtitle {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .github-link:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        /* Cool, minimal navigation */
+        .nav {
+            background: white;
+            padding: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav a:hover, .nav a.active {
+            background: var(--bg-secondary);
+            color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        /* Relaxed main content */
+        .main {
+            padding: 3rem 0;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .section h2 {
+            font-size: 2.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            position: relative;
+            display: inline-block;
+        }
+
+        .section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+        }
+
+        .section h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 2rem 0 1rem 0;
+            color: var(--primary-color);
+        }
+
+        .section p {
+            margin-bottom: 1.25rem;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
+        /* Cool card designs */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.primary {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .card.secondary {
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .card.accent {
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .card h4 {
+            margin: 0 0 1rem 0;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card .icon {
+            font-size: 1.5rem;
+        }
+
+        /* Chill code blocks */
+        .code-section {
+            background: var(--charcoal);
+            color: #E2E8F0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            position: relative;
+            font-family: 'JetBrains Mono', 'Monaco', monospace;
+        }
+
+        .code-section::before {
+            content: attr(data-language);
+            position: absolute;
+            top: 0.75rem;
+            right: 1rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .code-section pre {
+            margin: 0;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        /* Step-by-step guide styling */
+        .steps-container {
+            background: var(--bg-accent);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .step {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            align-items: flex-start;
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+        }
+
+        .step-content h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary-color);
+        }
+
+        .step-content p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+
+        /* Configuration table */
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .config-table th,
+        .config-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .config-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .config-table td {
+            color: var(--text-secondary);
+        }
+
+        .config-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* GitHub section styling */
+        .github-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .github-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Relaxed CTA */
+        .cta {
+            background: var(--warm-gradient);
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+            margin: 3rem 0;
+            border-radius: 16px;
+        }
+
+        .cta h2 {
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .cta h2::after {
+            background: white;
+            width: 80px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.875rem 2rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            margin: 0.5rem;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border-color: white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: var(--primary-color);
+        }
+
+        /* Cool footer */
+        .footer {
+            background: var(--charcoal);
+            color: var(--warm-gray);
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        .footer a {
+            color: var(--primary-teal);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            color: white;
+        }
+
+        /* Feature lists */
+        .feature-list {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        .feature-list li {
+            padding: 0.5rem 0;
+            position: relative;
+            padding-left: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .feature-list li::before {
+            content: '✨';
+            position: absolute;
+            left: 0;
+            font-size: 1.1rem;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            .header h1 {
+                font-size: 2.25rem;
+            }
+
+            .header {
+                padding: 3rem 0;
+            }
+
+            .section h2 {
+                font-size: 1.875rem;
+            }
+
+            .nav ul {
+                gap: 1rem;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .github-stats {
+                gap: 1rem;
+            }
+
+            .step {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* Smooth animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content fade-in-up">
+                <h1>Oracle ADB + ORM Stack</h1>
+                <p class="subtitle">A chill way to deploy enterprise database infrastructure ✨</p>
+                <a href="https://github.com/ViliTajnic/OCI-Autonomous-Terraform-IaC" class="github-link" target="_blank">
+                    <span>🚀</span> View on GitHub
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <nav class="nav">
+        <div class="container">
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#prerequisites">Prerequisites</a></li>
+                <li><a href="#github">GitHub</a></li>
+                <li><a href="#configuration">Config</a></li>
+                <li><a href="#usage">Usage Guide</a></li>
+                <li><a href="#deployment">Deploy</a></li>
+                <li><a href="#scripts">Scripts</a></li>
+                <li><a href="#python-scripts">Python Scripts</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="container">
+            <section id="overview" class="section fade-in-up">
+                <h2>What's This About?</h2>
+                <p>This is a super straightforward Oracle Resource Manager (ORM) Stack that gets you up and running with Oracle Autonomous Database in minutes, not hours. Perfect for developers who want enterprise-grade database infrastructure without the complexity.</p>
+
+                <p><strong>Why this matters for enterprise development:</strong> Most enterprise applications need rock-solid database infrastructure, but setting it up traditionally takes weeks of planning, configuration, and testing. This ORM Stack eliminates all that friction - you get enterprise-grade Oracle database capabilities with the same effort as spinning up a simple web server.</p>
+
+                <div class="card-grid">
+                    <div class="card primary">
+                        <h4><span class="icon">🎯</span> One-Click Deploy</h4>
+                        <p>Upload a ZIP file to ORM and click deploy. That's it. No complex setup, no Terraform knowledge required. From zero to enterprise database in under 5 minutes.</p>
+                    </div>
+
+                    <div class="card secondary">
+                        <h4><span class="icon">🗄️</span> Auto Database</h4>
+                        <p>Get a self-managing Oracle Autonomous Database that scales, patches, and optimizes itself automatically. Focus on building features, not managing infrastructure.</p>
+                    </div>
+
+                    <div class="card accent">
+                        <h4><span class="icon">🐍</span> Python Ready</h4>
+                        <p>Includes 5 Python scripts for testing connectivity, running queries, and troubleshooting connections. Plus examples for modern frameworks like FastAPI and Flask.</p>
+                    </div>
+                </div>
+
+                <h3>Enterprise Development Made Simple</h3>
+                <p>Building enterprise applications usually means dealing with complex infrastructure, database administration, security configurations, and scalability planning. This stack eliminates those barriers:</p>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <h4>🚀 Rapid Prototyping</h4>
+                        <p>Go from idea to working prototype in hours, not weeks. Perfect for hackathons, proof-of-concepts, or validating business ideas with real enterprise-grade infrastructure.</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>📈 Production-Ready Scaling</h4>
+                        <p>Start with Always Free resources, then seamlessly scale to handle enterprise workloads. The same code that works in development works in production.</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>🔒 Enterprise Security</h4>
+                        <p>Get Oracle's enterprise security features out of the box - encryption, access controls, audit logging, and compliance features that would take months to implement manually.</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>🤖 Built-in Intelligence</h4>
+                        <p>Oracle ADB includes machine learning capabilities, automatic performance tuning, and intelligent query optimization. Your applications get smarter without extra work.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="prerequisites" class="section fade-in-up">
+                <h2>Prerequisites & Setup</h2>
+                <p>Before you can deploy this awesome Oracle infrastructure, you'll need to set up a few things. Don't worry - it's all free and takes about 10 minutes! 🎯</p>
+
+                <h3>🎁 Step 1: Create Oracle Cloud Free Account</h3>
+                <p><strong>The best part?</strong> Oracle Cloud offers one of the most generous free tiers in the industry - and it's "Always Free", not just a trial that expires!</p>
+
+                <div class="steps-container">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Visit Oracle Cloud</h4>
+                            <p>Go to <a href="https://cloud.oracle.com" target="_blank">cloud.oracle.com</a> and click "Start for free" or "Try Oracle Cloud Free Tier"</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Choose Your Country</h4>
+                            <p>Select your country/region. This determines your home region and data residency for compliance.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Provide Basic Info</h4>
+                            <p>Enter your name, email, and create a password. You'll need a valid email for account verification.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Verify Your Identity</h4>
+                            <p>Provide a phone number for SMS verification. Oracle needs this to prevent abuse of the free tier.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h4>Add Payment Method</h4>
+                            <p><strong>Important:</strong> You need a credit card for verification, but you won't be charged unless you upgrade to paid services. Oracle clearly separates free vs paid resources.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <h4>Confirm & Activate</h4>
+                            <p>Review the terms, submit your application, and wait for account activation (usually instant, sometimes up to 24 hours).</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>💰 What You Get With Always Free</h3>
+                <div class="card-grid">
+                    <div class="card primary">
+                        <h4><span class="icon">🗄️</span> Autonomous Database</h4>
+                        <ul class="feature-list">
+                            <li>2 Autonomous Database instances</li>
+                            <li>20GB storage each, 1 OCPU each</li>
+                            <li>All enterprise features included</li>
+                            <li>Automatic backups and security</li>
+                        </ul>
+                    </div>
+
+                    <div class="card secondary">
+                        <h4><span class="icon">💻</span> Compute Instances</h4>
+                        <ul class="feature-list">
+                            <li>2 AMD-based VMs (1/8 OCPU, 1GB RAM each)</li>
+                            <li>OR 4 Arm-based VMs (1/6 OCPU, 1GB RAM each)</li>
+                            <li>Oracle Linux or Ubuntu</li>
+                            <li>200GB total block storage</li>
+                        </ul>
+                    </div>
+
+                    <div class="card accent">
+                        <h4><span class="icon">☁️</span> Additional Services</h4>
+                        <ul class="feature-list">
+                            <li>Load Balancer (10 Mbps bandwidth)</li>
+                            <li>Object Storage (20GB)</li>
+                            <li>Archive Storage (10GB)</li>
+                            <li>Monitoring and notifications</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="code-section" data-language="text">
+                    <pre>💡 Pro Tips for OCI Free Account:
+
+✅ Always Free vs Free Trial
+- Always Free: No expiration, yours forever
+- $300 Free Trial: 30-day trial for paid services
+- This project uses ONLY Always Free resources
+
+✅ Regional Selection
+- Choose a region close to you for better performance
+- You can't change your home region later
+- Popular choices: us-ashburn-1, eu-frankfurt-1, ap-tokyo-1
+
+✅ Identity Verification
+- Have your phone ready for SMS verification
+- Credit card is required but won't be charged
+- Activation is usually instant</pre>
+                </div>
+
+                <h3>🔑 Step 2: Generate SSH Key Pair</h3>
+                <p>You'll need an SSH key pair to securely connect to your compute instance. Here's how to create one:</p>
+
+                <h4>On Windows (PowerShell or WSL):</h4>
+                <div class="code-section" data-language="bash">
+                    <pre># Open PowerShell or Windows Terminal
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/oci_key
+
+# This creates two files:
+# ~/.ssh/oci_key (private key - keep this secret!)
+# ~/.ssh/oci_key.pub (public key - this goes in ORM Stack)
+
+# Display your public key to copy later
+cat ~/.ssh/oci_key.pub</pre>
+                </div>
+
+                <h4>On macOS/Linux:</h4>
+                <div class="code-section" data-language="bash">
+                    <pre># Open Terminal
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/oci_key
+
+# Display your public key
+cat ~/.ssh/oci_key.pub
+
+# Copy the entire output - you'll paste this in the ORM Stack configuration</pre>
+                </div>
+
+                <h4>Alternative: Use OCI Cloud Shell</h4>
+                <div class="code-section" data-language="bash">
+                    <pre># In OCI Console, click the Cloud Shell icon (>_) at the top
+# Cloud Shell has ssh-keygen pre-installed
+
+ssh-keygen -t rsa -b 4096 -f ~/oci_key
+cat ~/oci_key.pub
+
+# Copy the output - this is your public key for the ORM Stack</pre>
+                </div>
+
+                <h3>📋 Step 3: Gather Required Information</h3>
+                <p>Before deploying the ORM Stack, collect these details from your OCI account:</p>
+
+                <table class="config-table">
+                    <thead>
+                        <tr>
+                            <th>Required Item</th>
+                            <th>Where to Find It</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Compartment OCID</strong></td>
+                            <td>Identity & Security → Compartments</td>
+                            <td>ocid1.compartment.oc1..aaaaa...</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SSH Public Key</strong></td>
+                            <td>From Step 2 above</td>
+                            <td>ssh-rsa AAAAB3NzaC1yc2E...</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Admin Password</strong></td>
+                            <td>Create a strong password (8+ chars)</td>
+                            <td>Demo123! (use something secure!)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>✅ Prerequisites Checklist</h3>
+                <div class="card">
+                    <h4>Ready to Deploy? ✓</h4>
+                    <ul class="feature-list">
+                        <li>Oracle Cloud Free Account activated</li>
+                        <li>SSH key pair generated</li>
+                        <li>Compartment OCID copied</li>
+                        <li>SSH public key ready to paste</li>
+                        <li>Strong admin password chosen</li>
+                        <li>GitHub repository bookmarked</li>
+                    </ul>
+                    <p><strong>If you can check all these boxes, you're ready to deploy! 🚀</strong></p>
+                </div>
+
+                <div class="cta" style="margin: 2rem 0; padding: 2rem 0;">
+                    <div style="text-align: center;">
+                        <h3>🎯 Ready to Get Started?</h3>
+                        <p>Once you have your OCI account and SSH keys, you're ready to deploy enterprise infrastructure!</p>
+                        <a href="#github" class="btn btn-primary">Continue to GitHub Setup →</a>
+                    </div>
+                </div>
+            </section>
+            <section id="github" class="section fade-in-up">
+                <h2>GitHub Repository</h2>
+
+                <div class="github-section">
+                    <h3>🔗 ViliTajnic/OCI-Autonomous-Terraform-IaC</h3>
+                    <p>Everything you need is in the GitHub repo - from Terraform files to Python scripts and documentation.</p>
+
+                    <div class="github-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">4</span>
+                            <div class="stat-label">Terraform Files</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">5</span>
+                            <div class="stat-label">Python Scripts</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">1</span>
+                            <div class="stat-label">README Guide</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">0</span>
+                            <div class="stat-label">Monthly Cost</div>
+                        </div>
+                    </div>
+
+                    <a href="https://github.com/ViliTajnic/OCI-Autonomous-Terraform-IaC" class="btn btn-primary" target="_blank">
+                        Explore Repository
+                    </a>
+                </div>
+
+                <h3>Repository Structure</h3>
+                <div class="code-section" data-language="text">
+                    <pre>OCI-Autonomous-Terraform-IaC/
+├── main.tf              # Core infrastructure
+├── variables.tf         # Input parameters
+├── outputs.tf           # Stack outputs
+├── schema.yaml          # ORM UI configuration
+├── README.md            # Setup guide
+└── scripts/
+    ├── requirements.txt # Python dependencies
+    ├── quick_test.py    # Fast connectivity check
+    ├── test_basic_connection.py
+    ├── connect_with_host.py
+    ├── sample_queries.py
+    └── troubleshoot_connection.py</pre>
+                </div>
+            </section>
+
+            <section id="scripts" class="section fade-in-up">
+                <h2>Terraform Infrastructure Scripts</h2>
+                <p>The magic happens in just 4 Terraform files that define your entire infrastructure. Here's what each one does:</p>
+
+                <div class="card-grid">
+                    <div class="card primary">
+                        <h4><span class="icon">🏗️</span> main.tf - Core Infrastructure</h4>
+                        <p>The heart of the stack - defines your Autonomous Database, compute instance, and networking components.</p>
+                        <div class="code-section" data-language="hcl">
+                            <pre># Autonomous Database - Self-managing enterprise database
+resource "oci_database_autonomous_database" "adb" {
+  compartment_id   = var.compartment_id
+  db_name         = "PYTHONADB"
+  display_name    = "Python ADB"
+
+  # Always Free tier configuration
+  is_free_tier               = true
+  cpu_core_count            = 1
+  data_storage_size_in_tbs  = 1
+
+  # Enterprise features enabled by default
+  admin_password           = var.admin_password
+  db_workload             = "OLTP"
+  is_auto_scaling_enabled = false
+}
+
+# Compute instance - Your development environment
+resource "oci_core_instance" "compute_instance" {
+  compartment_id      = var.compartment_id
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  shape              = "VM.Standard.E2.1.Micro"
+
+  # Oracle Linux with Python pre-installed
+  source_details {
+    source_type = "image"
+    source_id   = var.instance_image_id
+  }
+
+  # SSH access configuration
+  metadata = {
+    ssh_authorized_keys = var.ssh_public_key
+  }
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="card secondary">
+                        <h4><span class="icon">⚙️</span> variables.tf - Configuration Options</h4>
+                        <p>All the customizable parameters for your infrastructure - passwords, keys, and resource sizes.</p>
+                        <div class="code-section" data-language="hcl">
+                            <pre># Required variables
+variable "admin_password" {
+  description = "Password for ADB admin user"
+  type        = string
+  sensitive   = true
+}
+
+variable "ssh_public_key" {
+  description = "SSH public key for instance access"
+  type        = string
+}
+
+variable "compartment_id" {
+  description = "OCID of the compartment"
+  type        = string
+}
+
+# Optional customizations
+variable "instance_shape" {
+  description = "Shape of the compute instance"
+  type        = string
+  default     = "VM.Standard.E2.1.Micro"
+}
+
+variable "db_cpu_cores" {
+  description = "Number of CPU cores for ADB"
+  type        = number
+  default     = 1
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="card accent">
+                        <h4><span class="icon">📤</span> outputs.tf - What You Get</h4>
+                        <p>Useful information about your deployed infrastructure - IP addresses, connection details, and next steps.</p>
+                        <div class="code-section" data-language="hcl">
+                            <pre># Instance connection details
+output "instance_public_ip" {
+  description = "Public IP of the compute instance"
+  value       = oci_core_instance.compute_instance.public_ip
+}
+
+output "ssh_command" {
+  description = "SSH command to connect to instance"
+  value       = "ssh opc@${oci_core_instance.compute_instance.public_ip}"
+}
+
+# Database information
+output "adb_display_name" {
+  description = "Display name of the Autonomous Database"
+  value       = oci_database_autonomous_database.adb.display_name
+}
+
+output "adb_service_console_url" {
+  description = "Service console URL for the ADB"
+  value       = oci_database_autonomous_database.adb.service_console_url
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="card primary">
+                        <h4><span class="icon">🎨</span> schema.yaml - UI Configuration</h4>
+                        <p>Makes the ORM interface user-friendly with descriptions, validation, and helpful prompts.</p>
+                        <div class="code-section" data-language="yaml">
+                            <pre>title: "Oracle Autonomous Database + Python Stack"
+description: "Deploy ADB with Python development environment"
+informationalText: "Creates enterprise-grade database infrastructure in minutes"
+
+variableGroups:
+  - title: "Database Configuration"
+    variables:
+      - admin_password
+      - db_cpu_cores
+  - title: "Compute Configuration"
+    variables:
+      - ssh_public_key
+      - instance_shape
+
+variables:
+  admin_password:
+    title: "Database Admin Password"
+    description: "Password for the ADMIN user (8+ characters)"
+    type: password
+    required: true
+    pattern: "^.{8,}$"</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Modern Python Connection Patterns</h3>
+                <p>For production enterprise applications, here are the connection patterns used in the scripts:</p>
+
+                <div class="code-section" data-language="python">
+                    <pre># Enterprise Connection Pool Pattern
+import oracledb
+from contextlib import contextmanager
+
+class EnterpriseDBManager:
+    """Production-ready database connection manager."""
+
+    def __init__(self, config):
+        self.config = config
+        self.pool = None
+
+    def initialize_pool(self):
+        """Create connection pool for high-performance apps."""
+        self.pool = oracledb.create_pool(
+            user=self.config['user'],
+            password=self.config['password'],
+            dsn=self.config['dsn'],
+            config_dir=self.config['wallet_location'],
+            wallet_location=self.config['wallet_location'],
+            wallet_password=self.config['wallet_password'],
+            min=2,          # Minimum connections
+            max=20,         # Maximum connections
+            increment=1,    # Connection increment
+            threaded=True   # Thread-safe
+        )
+
+    @contextmanager
+    def get_connection(self):
+        """Context manager for safe connection handling."""
+        connection = self.pool.acquire()
+        try:
+            yield connection
+        finally:
+            self.pool.release(connection)</pre>
+                </div>
+            </section>
+
+            <section id="python-scripts" class="section fade-in-up">
+                <h2>Python Scripts Reference</h2>
+                <p>The repository includes 5 specialized Python scripts for different aspects of working with your Autonomous Database. Here's your complete reference guide:</p>
+
+                <div class="card-grid">
+                    <div class="card primary">
+                        <h4><span class="icon">⚡</span> quick_test.py</h4>
+                        <p><strong>Purpose:</strong> Lightning-fast connectivity verification</p>
+                        <ul class="feature-list">
+                            <li>Minimal output - just success or failure</li>
+                            <li>Perfect for automation and CI/CD pipelines</li>
+                            <li>Returns proper exit codes (0=success, 1=fail)</li>
+                            <li>Great for health checks and monitoring</li>
+                        </ul>
+                        <p><strong>When to use:</strong> First test after deployment, automated testing, quick verification</p>
+                    </div>
+
+                    <div class="card secondary">
+                        <h4><span class="icon">🔍</span> test_basic_connection.py</h4>
+                        <p><strong>Purpose:</strong> Comprehensive connection testing with detailed info</p>
+                        <ul class="feature-list">
+                            <li>Tests all service levels (high/medium/low performance)</li>
+                            <li>Shows database version and configuration</li>
+                            <li>Displays user and database connection details</li>
+                            <li>Detailed success/failure messages with context</li>
+                        </ul>
+                        <p><strong>When to use:</strong> Initial setup validation, understanding your database config, debugging</p>
+                    </div>
+
+                    <div class="card accent">
+                        <h4><span class="icon">🔧</span> connect_with_host.py</h4>
+                        <p><strong>Purpose:</strong> Deep dive into connection details and host information</p>
+                        <ul class="feature-list">
+                            <li>Reads and displays TNS configuration</li>
+                            <li>Shows server host and instance information</li>
+                            <li>Session details and client information</li>
+                            <li>Network and service configuration data</li>
+                        </ul>
+                        <p><strong>When to use:</strong> Troubleshooting network issues, understanding infrastructure</p>
+                    </div>
+
+                    <div class="card primary">
+                        <h4><span class="icon">📊</span> sample_queries.py</h4>
+                        <p><strong>Purpose:</strong> Demonstrate real database operations and enterprise patterns</p>
+                        <ul class="feature-list">
+                            <li>Creates realistic business tables (employees, analytics)</li>
+                            <li>Inserts sample data with proper data types</li>
+                            <li>Shows complex queries and aggregations</li>
+                            <li>Demonstrates transaction management</li>
+                        </ul>
+                        <p><strong>When to use:</strong> Learning SQL operations, testing performance, building prototypes</p>
+                    </div>
+
+                    <div class="card secondary">
+                        <h4><span class="icon">🛠️</span> troubleshoot_connection.py</h4>
+                        <p><strong>Purpose:</strong> Comprehensive diagnostic tool for connection issues</p>
+                        <ul class="feature-list">
+                            <li>Validates wallet files and permissions</li>
+                            <li>Checks Python environment and dependencies</li>
+                            <li>Tests network connectivity to Oracle services</li>
+                            <li>Provides specific solutions for common problems</li>
+                        </ul>
+                        <p><strong>When to use:</strong> When connections fail, environment validation, setup debugging</p>
+                    </div>
+                </div>
+
+                <h3>Script Usage Examples & Commands</h3>
+                <div class="code-section" data-language="bash">
+                    <pre># Navigate to scripts directory
+cd OCI-Autonomous-Terraform-IaC/scripts/
+
+# Install dependencies (one-time setup)
+pip3 install --user -r requirements.txt
+
+# 1. Quick connectivity test (recommended first step)
+python3 quick_test.py
+# Expected output: ✅ Connection successful at 2025-01-08 14:30:25
+
+# 2. Comprehensive connection testing
+python3 test_basic_connection.py
+# Shows detailed info about all service levels
+
+# 3. Get connection and infrastructure details
+python3 connect_with_host.py
+# Displays TNS config and server information
+
+# 4. Run sample database operations
+python3 sample_queries.py
+# Creates tables, inserts data, runs enterprise queries
+
+# 5. Debug any connection issues
+python3 troubleshoot_connection.py
+# Comprehensive diagnostic with specific solutions</pre>
+                </div>
+
+                <h3>Complete Script Code Examples</h3>
+
+                <h4>quick_test.py - The Essential Health Check</h4>
+                <div class="code-section" data-language="python">
+                    <pre>#!/usr/bin/env python3
+"""
+Quick Oracle ADB Connection Test
+Simple, fast connectivity verification for automation
+"""
+import oracledb
+import getpass
+import sys
+
+def quick_test():
+    """Perform a quick connection test with minimal output."""
+    try:
+        # Get credentials securely
+        admin_password = getpass.getpass("Enter ADMIN password: ")
+        wallet_password = getpass.getpass("Enter wallet password: ")
+
+        # Quick connection test using high-performance service
+        conn = oracledb.connect(
+            user="ADMIN",
+            password=admin_password,
+            dsn="pythonadb_high",
+            config_dir="/home/opc/wallet",
+            wallet_location="/home/opc/wallet",
+            wallet_password=wallet_password
+        )
+
+        # Simple test query
+        cursor = conn.cursor()
+        cursor.execute("SELECT 'Connection successful at ' || TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') FROM dual")
+        result = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        print("✅", result)
+        return True
+
+    except oracledb.DatabaseError as e:
+        error_obj = e.args[0] if e.args else None
+        error_code = error_obj.code if hasattr(error_obj, 'code') else 'Unknown'
+        print(f"❌ Connection failed (Error {error_code}): {e}")
+        return False
+
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        return False
+
+if __name__ == "__main__":
+    success = quick_test()
+    sys.exit(0 if success else 1)  # Return proper exit codes</pre>
+                </div>
+
+                <h3>Recommended Script Workflow</h3>
+                <div class="steps-container">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Quick Health Check</h4>
+                            <p>Start with <code>python3 quick_test.py</code> to verify basic connectivity. This should be your first test after any setup.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Comprehensive Testing</h4>
+                            <p>Run <code>python3 test_basic_connection.py</code> to test all service levels and get detailed database information.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Explore Database Operations</h4>
+                            <p>Execute <code>python3 sample_queries.py</code> to see real enterprise database operations and learn SQL patterns.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Troubleshoot If Needed</h4>
+                            <p>If you encounter issues, run <code>python3 troubleshoot_connection.py</code> for comprehensive diagnostics.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h4>Build Your Application</h4>
+                            <p>Use the connection patterns and SQL examples from the scripts to build your own enterprise applications.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Script Dependencies</h3>
+                <div class="code-section" data-language="text">
+                    <pre># requirements.txt - All dependencies for the scripts
+oracledb>=1.4.0
+pandas>=1.5.0
+sqlalchemy>=2.0.0
+requests>=2.28.0
+
+# Installation command
+pip3 install --user -r requirements.txt</pre>
+                </div>
+
+                <p><strong>Pro Tip:</strong> All scripts use the modern <code>python-oracledb</code> driver which doesn't require Oracle Instant Client installation. Just install via pip and you're ready to go! 🚀</p>
+            </section>
+
+            <section id="configuration" class="section fade-in-up">
+                <h2>Configuration Options</h2>
+                <p>The ORM Stack is designed to be flexible. Here are the main configuration options you can customize:</p>
+
+                <h3>Required Variables</h3>
+                <table class="config-table">
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Description</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>admin_password</code></td>
+                            <td>Database ADMIN password (8+ chars)</td>
+                            <td>Demo123!</td>
+                        </tr>
+                        <tr>
+                            <td><code>ssh_public_key</code></td>
+                            <td>Your SSH public key for instance access</td>
+                            <td>ssh-rsa AAAAB3...</td>
+                        </tr>
+                        <tr>
+                            <td><code>compartment_id</code></td>
+                            <td>OCI compartment OCID</td>
+                            <td>ocid1.compartment.oc1...</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Optional Customizations</h3>
+                <div class="card-grid">
+                    <div class="card">
+                        <h4>🖥️ Compute Shape</h4>
+                        <p>Default: VM.Standard.E2.1.Micro (Always Free)<br>
+                        Can change to: VM.Standard.E4.Flex for more power</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>🗄️ Database Size</h4>
+                        <p>Default: 20GB, 1 OCPU (Always Free)<br>
+                        Can scale: Up to multiple TB and OCPUs</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>🌐 Network CIDR</h4>
+                        <p>Default: 10.0.0.0/16<br>
+                        Can customize: Any valid CIDR block</p>
+                    </div>
+                </div>
+
+                <h3>Environment-Specific Config</h3>
+                <div class="code-section" data-language="hcl">
+                    <pre># Development Environment
+variable "environment" {
+  default = "development"
+}
+
+variable "db_cpu_cores" {
+  default = 1  # Always Free
+}
+
+variable "db_storage_tbs" {
+  default = 1  # 20GB Always Free
+}
+
+# Production Environment (paid tier)
+variable "db_cpu_cores" {
+  default = 4  # More performance
+}
+
+variable "db_storage_tbs" {
+  default = 10  # 10TB storage
+}</pre>
+                </div>
+            </section>
+
+            <section id="usage" class="section fade-in-up">
+                <h2>Usage Manual</h2>
+                <p>Here's how to get everything up and running, step by step. No stress, just follow along!</p>
+
+                <div class="steps-container">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Download & Prepare</h4>
+                            <p>Clone or download the repository, then create a ZIP file with the Terraform files (main.tf, variables.tf, outputs.tf, schema.yaml).</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Upload to ORM</h4>
+                            <p>Go to OCI Console → Developer Services → Resource Manager → Create Stack → Upload your ZIP file.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Configure Variables</h4>
+                            <p>Set your database admin password and paste your SSH public key. ORM will show a nice UI for this.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Plan & Deploy</h4>
+                            <p>Click "Plan" to see what will be created, then "Apply" to deploy. Takes about 3-5 minutes.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h4>Download Wallet</h4>
+                            <p>Go to your new Autonomous Database, click "DB Connection", download the wallet ZIP with a password.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <h4>Test Connection</h4>
+                            <p>SSH to your instance, upload the wallet, and run the Python scripts to test everything works!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Quick Commands</h3>
+                <div class="code-section" data-language="bash">
+                    <pre># SSH to your instance (get IP from ORM outputs)
+ssh opc@&lt;instance_ip&gt;
+
+# Upload wallet
+scp wallet.zip opc@&lt;instance_ip&gt;:~/
+
+# Extract and test
+mkdir ~/wallet
+unzip wallet.zip -d ~/wallet/
+
+# Install Python dependencies
+cd OCI-Autonomous-Terraform-IaC/scripts/
+pip3 install --user -r requirements.txt
+
+# Quick connectivity test
+python3 quick_test.py</pre>
+                </div>
+
+                <h3>Common Tasks</h3>
+                <div class="card-grid">
+                    <div class="card">
+                        <h4>🔍 Check Connection</h4>
+                        <ul class="feature-list">
+                            <li>Run <code>python3 quick_test.py</code></li>
+                            <li>Should see "Connection successful"</li>
+                            <li>If not, run troubleshoot script</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h4>📊 Run Sample Queries</h4>
+                        <ul class="feature-list">
+                            <li>Use <code>python3 sample_queries.py</code></li>
+                            <li>Creates tables and inserts data</li>
+                            <li>Shows various SQL operations</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h4>🛠️ Debug Issues</h4>
+                        <ul class="feature-list">
+                            <li>Run <code>python3 troubleshoot_connection.py</code></li>
+                            <li>Checks wallet files and permissions</li>
+                            <li>Provides specific error guidance</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="deployment" class="section fade-in-up">
+                <h2>Deployment Details</h2>
+                <p>What actually gets deployed when you run this ORM Stack:</p>
+
+                <div class="card-grid">
+                    <div class="card primary">
+                        <h4><span class="icon">🗄️</span> Autonomous Database</h4>
+                        <ul class="feature-list">
+                            <li>Name: PYTHONADB</li>
+                            <li>20GB storage, 1 OCPU (Always Free)</li>
+                            <li>OLTP workload type</li>
+                            <li>Auto-scaling disabled (free tier)</li>
+                            <li>Automatic backups enabled</li>
+                        </ul>
+                    </div>
+
+                    <div class="card secondary">
+                        <h4><span class="icon">💻</span> Compute Instance</h4>
+                        <ul class="feature-list">
+                            <li>VM.Standard.E2.1.Micro (Always Free)</li>
+                            <li>Oracle Linux 8</li>
+                            <li>Python 3.x pre-installed</li>
+                            <li>SSH access configured</li>
+                            <li>Public IP assigned</li>
+                        </ul>
+                    </div>
+
+                    <div class="card accent">
+                        <h4><span class="icon">🌐</span> Network Infrastructure</h4>
+                        <ul class="feature-list">
+                            <li>VCN with 10.0.0.0/16 CIDR</li>
+                            <li>Public subnet (10.0.1.0/24)</li>
+                            <li>Internet Gateway</li>
+                            <li>Security groups for SSH (port 22)</li>
+                            <li>Route tables configured</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Stack Outputs</h3>
+                <p>After deployment, the ORM Stack provides these useful outputs:</p>
+                <div class="code-section" data-language="text">
+                    <pre>Outputs:
+
+instance_public_ip = "XXX.XXX.XXX.XXX"
+ssh_command = "ssh opc@XXX.XXX.XXX.XXX"
+adb_display_name = "Python ADB"
+adb_service_console_url = "https://cloud.oracle.com/..."
+
+Next Steps:
+1. Download ADB wallet from console
+2. SSH to instance using: ssh opc@XXX.XXX.XXX.XXX
+3. Upload wallet and test connectivity</pre>
+                </div>
+            </section>
