@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLcl Connection Manager — Oracle 26ai Deep Dive | Vili Tajnic</title>
+    <meta name="description" content="A technical deep dive into SQLcl Connection Manager for Oracle 26ai developers and DBAs — multi-environment connections, wallet-based ADB access, MCP server integration, and CI/CD automation.">
+    <meta name="keywords" content="SQLcl, Oracle 26ai, Connection Manager, ADB, MCP Server, Claude Desktop, Oracle DBA">
+    <meta name="author" content="Vili Tajnic">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-blue: #3B82F6;
+            --deep-blue: #1D4ED8;
+            --royal-blue: #1E40AF;
+            --oracle-red: #C0392B;
+            --soft-purple: #8B5CF6;
+            --warm-amber: #F59E0B;
+            --muted-teal: #14B8A6;
+            --warm-gray: #64748B;
+            --cool-gray: #475569;
+            --light-gray: #F1F5F9;
+            --cream: #EFF6FF;
+            --charcoal: #1E293B;
+
+            --primary-color: var(--deep-blue);
+            --secondary-color: var(--soft-purple);
+            --accent-color: var(--warm-amber);
+            --text-primary: var(--charcoal);
+            --text-secondary: var(--cool-gray);
+            --text-light: var(--warm-gray);
+            --bg-primary: #FFFFFF;
+            --bg-secondary: var(--light-gray);
+            --bg-accent: var(--cream);
+            --border-color: #E2E8F0;
+
+            --primary-gradient: linear-gradient(135deg, #1D4ED8 0%, #7C3AED 100%);
+            --warm-gradient: linear-gradient(135deg, var(--warm-amber) 0%, #F97316 100%);
+            --cool-gradient: linear-gradient(135deg, var(--muted-teal) 0%, var(--primary-blue) 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.7;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+        /* Header */
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 4rem 0 3rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZG90cyIgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48Y2lyY2xlIGN4PSI0MCIgY3k9IjQwIiByPSIyIiBmaWxsPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMSkiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZG90cykiLz48L3N2Zz4=') repeat;
+            opacity: 0.15;
+        }
+        .header-content { position: relative; z-index: 1; }
+        .header h1 { font-size: 2.6rem; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: -0.02em; }
+        .header .subtitle { font-size: 1.15rem; opacity: 0.9; margin-bottom: 0.5rem; font-weight: 300; }
+        .header .tagline { font-size: 0.95rem; opacity: 0.75; font-style: italic; }
+
+        .back-bar {
+            background: var(--charcoal);
+            padding: 0.65rem 0;
+            text-align: center;
+        }
+        .back-bar a {
+            color: #94A3B8;
+            text-decoration: none;
+            font-size: 0.875rem;
+            margin: 0 1rem;
+            transition: color 0.2s;
+        }
+        .back-bar a:hover { color: white; }
+        .back-bar span { color: #475569; }
+
+        /* Sticky nav */
+        .nav {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+        }
+        .nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0; padding: 0; }
+        .nav a {
+            display: block;
+            padding: 0.85rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .nav a:hover, .nav a.active {
+            color: var(--primary-color);
+            background: var(--bg-secondary);
+        }
+
+        /* Main content */
+        .main { padding: 2rem 0 4rem; }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
+        .section h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--bg-secondary);
+        }
+        .section h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 1.75rem 0 0.75rem;
+        }
+        .section p { color: var(--text-secondary); margin-bottom: 1rem; }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--charcoal);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        .code-block::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 0.5rem;
+            right: 1rem;
+            font-size: 0.7rem;
+            color: #64748B;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .code-block pre {
+            color: #E2E8F0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            white-space: pre;
+        }
+        code {
+            background: var(--bg-secondary);
+            color: var(--primary-color);
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+        }
+
+        /* Callout boxes */
+        .callout {
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+            border-left: 4px solid;
+            font-size: 0.92rem;
+        }
+        .callout-info { background: #EFF6FF; border-color: var(--primary-blue); color: #1E40AF; }
+        .callout-warning { background: #FFFBEB; border-color: var(--warm-amber); color: #92400E; }
+        .callout-security { background: #F0FDF4; border-color: #16A34A; color: #14532D; }
+        .callout strong { display: block; margin-bottom: 0.25rem; }
+
+        /* Cards */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin: 1.25rem 0; }
+        .card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+        }
+        .card.primary { border-top: 3px solid var(--primary-blue); }
+        .card.secondary { border-top: 3px solid var(--soft-purple); }
+        .card.accent { border-top: 3px solid var(--warm-amber); }
+        .card h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .card p, .card li { font-size: 0.88rem; color: var(--text-secondary); }
+
+        /* Command reference table */
+        .cmd-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            margin: 1rem 0;
+        }
+        .cmd-table th {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+        .cmd-table td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+        .cmd-table tr:hover td { background: var(--bg-secondary); }
+        .cmd-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--primary-color); white-space: nowrap; }
+
+        /* Steps */
+        .steps { list-style: none; counter-reset: step; }
+        .steps li {
+            counter-increment: step;
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            align-items: flex-start;
+        }
+        .steps li::before {
+            content: counter(step);
+            background: var(--primary-gradient);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .steps li > div strong { display: block; font-size: 0.92rem; margin-bottom: 0.2rem; }
+        .steps li > div span { font-size: 0.85rem; color: var(--text-secondary); }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 0.65rem 1.4rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-primary { background: var(--primary-gradient); color: white; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-outline { border: 1px solid var(--border-color); color: var(--text-secondary); background: white; }
+        .btn-outline:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+
+        /* Footer */
+        .footer {
+            background: var(--charcoal);
+            color: #94A3B8;
+            padding: 2.5rem 0;
+            margin-top: 2rem;
+        }
+        .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .footer a { color: #94A3B8; text-decoration: none; }
+        .footer a:hover { color: white; }
+        .footer-links { display: flex; gap: 1.5rem; font-size: 0.875rem; flex-wrap: wrap; }
+        .footer p { font-size: 0.875rem; }
+
+        /* Article nav */
+        .article-nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .article-nav a {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 1.25rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-primary);
+            flex: 1;
+            min-width: 200px;
+            transition: all 0.2s;
+            border: 1px solid var(--border-color);
+        }
+        .article-nav a:hover { border-color: var(--primary-blue); background: var(--cream); }
+        .article-nav .label { font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .article-nav .title { font-size: 0.9rem; font-weight: 600; }
+        .article-nav a.next { text-align: right; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeInUp 0.5s ease-out; }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8rem; }
+            .section { padding: 1.5rem; }
+            .cmd-table { font-size: 0.8rem; }
+            .cmd-table td:first-child { white-space: normal; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="back-bar">
+    <a href="./index.html">&#8592; Home</a>
+    <span>|</span>
+    <a href="./works.html">Works</a>
+    <span>|</span>
+    <a href="./about.html">About</a>
+    <span>|</span>
+    <a href="./contact.html">Contact</a>
+</div>
+
+<header class="header">
+    <div class="container">
+        <div class="header-content fade-in">
+            <h1>SQLcl Connection Manager</h1>
+            <p class="subtitle">A Technical Deep Dive for Oracle 26ai Developers &amp; DBAs</p>
+            <p class="tagline">Managing multi-environment Oracle connections, wallet-based ADB access, MCP server integration, and CI/CD automation — all from a single CLI.</p>
+        </div>
+    </div>
+</header>
+
+<nav class="nav">
+    <div class="container">
+        <ul>
+            <li><a href="#why-cm">1. Why CM?</a></li>
+            <li><a href="#under-hood">2. Under the Hood</a></li>
+            <li><a href="#commands">3. Commands</a></li>
+            <li><a href="#saving">4. Saving Connections</a></li>
+            <li><a href="#managing">5. Managing</a></li>
+            <li><a href="#mcp">6. MCP Server</a></li>
+            <li><a href="#vectors">7. Vector Store</a></li>
+            <li><a href="#cicd">8. CI/CD</a></li>
+            <li><a href="#advanced">9. Advanced</a></li>
+            <li><a href="#conclusion">11. Conclusion</a></li>
+        </ul>
+    </div>
+</nav>
+
+<main class="main">
+    <div class="container">
+
+        <!-- Section 1 -->
+        <section id="why-cm" class="section fade-in">
+            <h2>1. Why Connection Manager Matters in Oracle 26ai Workflows</h2>
+            <p>If you are a developer or DBA working with Oracle Database 26ai, your day likely spans multiple environments: a local containerised 26ai instance running on Docker or Colima, a cloud-hosted Pluggable Database (PDB) on OCI, an Autonomous Database (ADB) accessed via wallet, and possibly a dedicated vector store for AI pipelines. Manually typing JDBC connection strings, TNS aliases, and wallet paths every single session is not only tedious — it introduces connection errors that are hard to debug under pressure.</p>
+            <p>SQLcl's Connection Manager (CM) solves this completely. It acts as a named connection registry that persists across SQLcl sessions, integrates directly with the <code>-name</code> flag at startup, and — critically for 26ai automation — satisfies the <code>-savepwd</code> requirement needed by the SQLcl MCP server to enable passwordless, automated database access from Claude Desktop and other AI tools.</p>
+
+            <div class="callout callout-info">
+                <strong>🔑 Key insight for 26ai AI tooling</strong>
+                The SQLcl MCP server (<code>oracle.sqldeveloper.mcp</code>) requires a saved connection with stored password (<code>-savepwd</code>) to operate without interactive prompts. This means properly configured Connection Manager entries are a prerequisite for any Oracle 26ai AI Optimizer, RAG pipeline, or MCP-based automation workflow.
+            </div>
+        </section>
+
+        <!-- Section 2 -->
+        <section id="under-hood" class="section">
+            <h2>2. How Connection Manager Works Under the Hood</h2>
+            <p>Connection Manager stores named connections in a JSON file located in the SQLcl user configuration directory. On Linux and macOS this is typically <code>~/.sqlcl/connections.json</code>. On Windows it sits under <code>%APPDATA%\sqlcl\</code>. The file is not encrypted but passwords — when saved with <code>-savepwd</code> — are obfuscated using a local keystore mechanism tied to your OS user account.</p>
+
+            <h3>Connection storage location</h3>
+            <div class="code-block" data-lang="shell">
+                <pre># Linux / macOS
+~/.sqlcl/connections.json
+
+# Windows
+%APPDATA%\sqlcl\connections.json
+
+# View raw JSON (useful for debugging or backup/restore)
+cat ~/.sqlcl/connections.json | python3 -m json.tool</pre>
+            </div>
+
+            <p>Each entry in the JSON contains the connection name, connection string, and a flag indicating whether a password is stored. The actual credential is held in a local Java KeyStore (JKS) file alongside the JSON. This design means that <code>connections.json</code> can be safely committed to a dotfiles repository without exposing passwords — but the keystore cannot be shared across machines.</p>
+
+            <div class="callout callout-info">
+                <strong>💡 Tip: Backing up connections across machines</strong>
+                Export connection strings (without passwords) from <code>connections.json</code> into a version-controlled dotfile. On a new machine, re-import and re-save passwords with <code>-savepwd</code>. This gives you portable, reproducible connection setup without credential exposure.
+            </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section id="commands" class="section">
+            <h2>3. Core Commands — Complete Reference</h2>
+            <p>The following table covers every Connection Manager command you need as a 26ai developer or DBA.</p>
+
+            <table class="cmd-table">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>conn -save &lt;name&gt; -savepwd &lt;connstr&gt;</td>
+                        <td>Save a new named connection with stored password</td>
+                        <td><code>conn -save dev26ai -savepwd system/pass@localhost:1521/freepdb1</code></td>
+                    </tr>
+                    <tr>
+                        <td>conn -save &lt;name&gt; -replace -savepwd &lt;connstr&gt;</td>
+                        <td>Update (replace) an existing named connection</td>
+                        <td><code>conn -save dev26ai -replace -savepwd system/newpass@localhost:1521/freepdb1</code></td>
+                    </tr>
+                    <tr>
+                        <td>sql -name &lt;name&gt;</td>
+                        <td>Connect to a saved connection by name at startup</td>
+                        <td><code>sql -name dev26ai</code></td>
+                    </tr>
+                    <tr>
+                        <td>cm list</td>
+                        <td>List all saved connection names</td>
+                        <td><code>cm list</code></td>
+                    </tr>
+                    <tr>
+                        <td>cm show &lt;name&gt;</td>
+                        <td>Show details of a specific connection (no password)</td>
+                        <td><code>cm show dev26ai</code></td>
+                    </tr>
+                    <tr>
+                        <td>cm test &lt;name&gt;</td>
+                        <td>Test connectivity for a named connection</td>
+                        <td><code>cm test adb_dev</code></td>
+                    </tr>
+                    <tr>
+                        <td>cm delete -conn &lt;name&gt;</td>
+                        <td>Remove a named connection</td>
+                        <td><code>cm delete -conn oke_prod</code></td>
+                    </tr>
+                    <tr>
+                        <td>cm export &gt; &lt;file&gt;</td>
+                        <td>Export connection names/strings (no passwords) to JSON</td>
+                        <td><code>cm export &gt; ~/dotfiles/oracle_connections.json</code></td>
+                    </tr>
+                    <tr>
+                        <td>cm import &lt;file&gt;</td>
+                        <td>Import connections from a JSON file</td>
+                        <td><code>cm import ~/dotfiles/oracle_connections.json</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 4 -->
+        <section id="saving" class="section">
+            <h2>4. Saving Connections — All Connection Types</h2>
+
+            <h3>4.1 Local PDB (Development)</h3>
+            <p>The most common pattern for 26ai local development against a containerised or on-premises PDB:</p>
+            <div class="code-block" data-lang="sql">
+                <pre>-- Save a local PDB connection with password
+conn -save dev26ai -savepwd system/Oracle123@localhost:1521/freepdb1
+
+-- Verify immediately
+cm test dev26ai</pre>
+            </div>
+
+            <h3>4.2 Oracle Autonomous Database (Wallet-based)</h3>
+            <p>Autonomous Database connections require a wallet. SQLcl supports the wallet either via <code>TNS_ADMIN</code> environment variable or inline within the connection string:</p>
+            <div class="code-block" data-lang="shell">
+                <pre>-- Option A: TNS_ADMIN environment variable (preferred for ADB)
+export TNS_ADMIN=/home/oracle/wallets/adb_dev
+conn -save adb_dev -savepwd admin/MySecurePass1@myatp_high
+
+-- Option B: Inline wallet reference
+conn -save adb_dev -savepwd \
+  'admin/MySecurePass1@(description=(retry_count=20)(retry_delay=3)
+   (address=(protocol=tcps)(port=1522)(host=adb.eu-frankfurt-1.oraclecloud.com))
+   (connect_data=(service_name=&lt;your_ocid&gt;_high.adb.oraclecloud.com))
+   (security=(ssl_server_dn_match=yes)(my_wallet_directory=/wallets/adb_dev)))'
+
+-- Test the ADB connection
+cm test adb_dev</pre>
+            </div>
+            <div class="callout callout-warning">
+                <strong>⚠️ ADB wallet note</strong>
+                The wallet directory must contain <code>cwallet.sso</code>, <code>ewallet.p12</code>, <code>tnsnames.ora</code>, and <code>sqlnet.ora</code>. When downloaded from OCI Console, extract the .zip directly into your wallet directory. Do not rename any files. The <code>-savepwd</code> flag is mandatory for MCP server usage.
+            </div>
+
+            <h3>4.3 OKE / Kubernetes-hosted PDB (SSH Tunnel or NodePort)</h3>
+            <p>When running Oracle 26ai on Oracle Kubernetes Engine (OKE) with a service exposed on a NodePort or via <code>kubectl port-forward</code>:</p>
+            <div class="code-block" data-lang="sql">
+                <pre>-- Assuming kubectl port-forward svc/oracle-db 1521:1521 is active
+conn -save oke_prod -savepwd system/Oracle123@127.0.0.1:1521/FREEPDB1
+
+-- Or for a NodePort on the OKE worker node IP
+conn -save oke_prod -savepwd system/Oracle123@&lt;node_ip&gt;:30521/FREEPDB1</pre>
+            </div>
+
+            <h3>4.4 Oracle 23ai / 26ai with TNS Alias</h3>
+            <p>If you maintain a <code>tnsnames.ora</code> file, you can save connections using TNS aliases directly. Ideal for teams sharing a centralised <code>tnsnames.ora</code>:</p>
+            <div class="code-block" data-lang="sql">
+                <pre>-- Assuming TNS_ADMIN is set and tnsnames.ora defines 'db26ai_dev'
+conn -save db26ai_dev -savepwd hr/Oracle123@db26ai_dev</pre>
+            </div>
+
+            <h3>4.5 Proxy (Application User) Connections</h3>
+            <p>Oracle 26ai supports proxy authentication — useful when an app schema user connects through a proxy account. Connection Manager supports this natively:</p>
+            <div class="code-block" data-lang="sql">
+                <pre>-- Proxy connection: connect as appuser through proxyaccount
+conn -save app_proxy -savepwd appuser[proxyaccount]/ProxyPass@localhost:1521/freepdb1</pre>
+            </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section id="managing" class="section">
+            <h2>5. Managing Connections — Inspect, Test, Update, Remove</h2>
+
+            <h3>5.1 Listing and Inspecting</h3>
+            <div class="code-block" data-lang="sql">
+                <pre>-- List all saved connection names
+cm list
+
+-- Example output:
+.
+├── adb_dev
+├── db26ai_dev
+├── dev26ai
+└── oke_prod
+
+-- Show details of a specific connection
+cm show dev26ai
+
+-- Example output:
+Name      : dev26ai
+Username  : system
+ConnString: localhost:1521/freepdb1
+SavePwd   : true</pre>
+            </div>
+
+            <h3>5.2 Testing Connectivity</h3>
+            <p>Connection testing is particularly valuable in Oracle 26ai pipelines where you need to validate connectivity before triggering a migration, vector ingestion job, or AI pipeline run:</p>
+            <div class="code-block" data-lang="shell">
+                <pre>-- Test a single connection
+cm test dev26ai
+
+-- Batch-test all connections using shell loop
+for conn in dev26ai adb_dev oke_prod db26ai_dev; do
+  echo -n "Testing $conn ... "
+  sql -name $conn -S /nolog &lt;&lt; EOF
+  cm test $conn
+  EXIT
+EOF
+done</pre>
+            </div>
+
+            <h3>5.3 Updating Credentials</h3>
+            <p>The <code>-replace</code> flag updates an existing entry without needing to delete and recreate it:</p>
+            <div class="code-block" data-lang="sql">
+                <pre>-- Update password after rotation
+conn -save dev26ai -replace -savepwd system/NewPassword123@localhost:1521/freepdb1
+
+-- Confirm the update worked
+cm test dev26ai</pre>
+            </div>
+
+            <h3>5.4 Deleting Connections</h3>
+            <div class="code-block" data-lang="sql">
+                <pre>-- Remove a named connection
+cm delete -conn oke_prod
+
+-- Verify removal
+cm list</pre>
+            </div>
+        </section>
+
+        <!-- Section 6 -->
+        <section id="mcp" class="section">
+            <h2>6. Connection Manager and the SQLcl MCP Server</h2>
+            <p>This is where Connection Manager becomes not just convenient but architecturally essential for Oracle 26ai AI workflows. The SQLcl MCP server — part of the <code>oracle.sqldeveloper.mcp</code> extension — exposes Oracle database tools (query execution, object listing, DDL generation) to AI assistants like Claude Desktop via the Model Context Protocol.</p>
+            <p>The MCP server launches SQLcl as a subprocess using stdio transport. Because there is no interactive terminal, it cannot prompt for passwords. The <code>-name</code> flag combined with a <code>-savepwd</code> connection is the only supported authentication path.</p>
+
+            <h3>Claude Desktop MCP configuration</h3>
+            <p>A typical <code>claude_desktop_config.json</code> entry for the SQLcl MCP server targeting an Oracle 26ai instance:</p>
+            <div class="code-block" data-lang="json">
+                <pre>// claude_desktop_config.json
+{
+  "mcpServers": {
+    "oracle-db": {
+      "command": "/opt/sqlcl/bin/sql",
+      "args": ["-name", "dev26ai"]
+    },
+    "oracle-adb": {
+      "command": "/opt/sqlcl/bin/sql",
+      "args": ["-name", "adb_dev"]
+    }
+  }
+}</pre>
+            </div>
+
+            <div class="callout callout-security">
+                <strong>🔒 Security best practice</strong>
+                Never put credentials directly in <code>claude_desktop_config.json</code> or in MCP server command arguments. Using <code>-name</code> keeps credentials out of process argument lists (visible via <code>ps aux</code>) and out of version-controlled config files. The Connection Manager keystore is the right credential boundary.
+            </div>
+
+            <h3>Using SQLcl MCP with multiple databases</h3>
+            <p>You can register multiple MCP servers in Claude Desktop, simultaneously exposing your local 26ai dev database, an ADB instance, and a production PDB — each as a separate MCP server:</p>
+            <div class="code-block" data-lang="json">
+                <pre>// Multi-DB claude_desktop_config.json
+{
+  "mcpServers": {
+    "oracle-dev": {
+      "command": "/opt/sqlcl/bin/sql",
+      "args": ["-name", "dev26ai"]
+    },
+    "oracle-adb-prod": {
+      "command": "/opt/sqlcl/bin/sql",
+      "args": ["-name", "adb_dev"]
+    },
+    "oracle-vectorstore": {
+      "command": "/opt/sqlcl/bin/sql",
+      "args": ["-name", "db26ai_dev"]
+    }
+  }
+}</pre>
+            </div>
+        </section>
+
+        <!-- Section 7 -->
+        <section id="vectors" class="section">
+            <h2>7. Vector Store Connections for Oracle 26ai AI Pipelines</h2>
+            <p>Oracle Database 26ai elevates vector search to a first-class citizen with HNSW and IVF indexing, the <code>VECTOR</code> datatype, and the <code>DBMS_VECTOR</code> package. When you build RAG pipelines — whether using LangChain, Spring AI, or the Oracle AI Optimizer — your embedding ingestion and retrieval scripts connect to the vector store database repeatedly.</p>
+
+            <h3>Recommended naming convention for AI workloads</h3>
+            <div class="code-block" data-lang="sql">
+                <pre>-- Vector store database (26ai with HNSW indexes)
+conn -save vs_dev -savepwd vector_admin/VecPass123@localhost:1521/freepdb1
+
+-- Oracle AI Optimizer metadata schema
+conn -save ai_opt -savepwd ai_opt_user/OptPass123@localhost:1521/freepdb1
+
+-- Production ADB vector store
+conn -save vs_prod -savepwd admin/ProdPass123@myadb_medium
+
+-- Verify vector memory configuration after connecting
+sql -name vs_dev
+SQL> SELECT value FROM v$parameter WHERE name = 'vector_memory_size';
+SQL> SELECT index_name, index_type FROM user_indexes WHERE index_type LIKE '%VECTOR%';</pre>
+            </div>
+
+            <h3>Python integration via subprocess</h3>
+            <p>Oracle AI Optimizer scripts and LangChain-based embedding pipelines often invoke SQLcl programmatically. Connection Manager names make this clean and portable:</p>
+            <div class="code-block" data-lang="python">
+                <pre>import subprocess
+import sys
+
+def run_sqlcl(conn_name: str, sql: str) -> str:
+    """Execute SQL via SQLcl named connection, return stdout."""
+    result = subprocess.run(
+        ['/opt/sqlcl/bin/sql', '-name', conn_name, '-S', '/nolog'],
+        input=f"{sql}\nEXIT;",
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f'SQLcl error: {result.stderr}')
+    return result.stdout
+
+# Query vector index status on dev
+output = run_sqlcl('vs_dev',
+    "SELECT index_name, index_type, status FROM user_indexes"
+    " WHERE index_type LIKE '%VECTOR%'")
+print(output)</pre>
+            </div>
+        </section>
+
+        <!-- Section 8 -->
+        <section id="cicd" class="section">
+            <h2>8. Automating Connection Setup — CI/CD and Team Onboarding</h2>
+            <p>In team environments or CI/CD pipelines running Oracle 26ai integration tests, you need a repeatable way to bootstrap Connection Manager entries without manual interaction.</p>
+
+            <h3>8.1 Headless connection setup script</h3>
+            <div class="code-block" data-lang="bash">
+                <pre>#!/bin/bash
+# setup_connections.sh — run once per environment
+# Requires: DB_PASSWORD and ADB_PASSWORD env vars set
+set -euo pipefail
+SQLCL=/opt/sqlcl/bin/sql
+
+echo "Setting up SQLcl Connection Manager entries..."
+
+# Local 26ai dev PDB
+$SQLCL -S /nolog &lt;&lt; EOF
+conn -save dev26ai -replace -savepwd system/${DB_PASSWORD}@localhost:1521/freepdb1
+cm test dev26ai
+EXIT
+EOF
+
+# Vector store connection
+$SQLCL -S /nolog &lt;&lt; EOF
+conn -save vs_dev -replace -savepwd vector_admin/${DB_PASSWORD}@localhost:1521/freepdb1
+cm test vs_dev
+EXIT
+EOF
+
+# ADB (TNS_ADMIN must be pre-configured)
+export TNS_ADMIN=/wallets/adb_dev
+$SQLCL -S /nolog &lt;&lt; EOF
+conn -save adb_dev -replace -savepwd admin/${ADB_PASSWORD}@myatp_high
+cm test adb_dev
+EXIT
+EOF
+
+echo "All connections configured successfully."</pre>
+            </div>
+
+            <h3>8.2 Exporting and importing connections</h3>
+            <p>For team onboarding, export connection names (structure only, no passwords) and share via a repository:</p>
+            <div class="code-block" data-lang="sql">
+                <pre>-- Export (run inside SQLcl)
+cm export > ~/dotfiles/oracle_connections.json
+
+-- Import on a new machine
+cm import ~/dotfiles/oracle_connections.json
+
+-- Then add passwords individually
+conn -save dev26ai -replace -savepwd system/MyLocalPwd@localhost:1521/freepdb1
+conn -save adb_dev  -replace -savepwd admin/MyAdbPwd@myatp_high</pre>
+            </div>
+
+            <h3>8.3 GitHub Actions workflow example</h3>
+            <div class="code-block" data-lang="yaml">
+                <pre># .github/workflows/oracle26ai-test.yml
+name: Oracle 26ai Integration Tests
+on: [push, pull_request]
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    services:
+      oracle26ai:
+        image: container-registry.oracle.com/database/free:latest
+        env:
+          ORACLE_PWD: ${{ secrets.ORACLE_PWD }}
+        ports: ['1521:1521']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup SQLcl Connection Manager
+        env:
+          DB_PASSWORD: ${{ secrets.ORACLE_PWD }}
+        run: bash scripts/setup_connections.sh
+      - name: Run SQL regression tests
+        run: |
+          sql -name dev26ai -S @tests/regression_suite.sql</pre>
+            </div>
+        </section>
+
+        <!-- Section 9 -->
+        <section id="advanced" class="section">
+            <h2>9. Advanced Patterns and Diagnostics</h2>
+
+            <h3>9.1 Environment-specific connection switching</h3>
+            <p>Use shell environment variables to drive connection selection, making scripts portable across dev/staging/prod:</p>
+            <div class="code-block" data-lang="bash">
+                <pre>#!/bin/bash
+# deploy_schema.sh
+ENV=${1:-dev}  # default to dev
+case $ENV in
+  dev)     CONN=dev26ai  ;;
+  staging) CONN=vs_dev   ;;
+  prod)    CONN=adb_dev  ;;
+  *)       echo "Unknown env: $ENV"; exit 1 ;;
+esac
+
+echo "Deploying schema to: $CONN ($ENV)"
+sql -name $CONN @schema/deploy.sql</pre>
+            </div>
+
+            <h3>9.2 Diagnosing ECONNREFUSED and wallet errors</h3>
+            <p>When <code>cm test</code> returns an error, the following diagnostic sequence isolates the cause quickly:</p>
+            <div class="code-block" data-lang="shell">
+                <pre>-- Step 1: Confirm the listener is reachable
+nc -zv localhost 1521
+
+-- Step 2: Check TNS_ADMIN for wallet-based connections
+ls -la $TNS_ADMIN
+# Must contain: cwallet.sso  ewallet.p12  sqlnet.ora  tnsnames.ora
+
+-- Step 3: Verify the saved connection string
+cm show adb_dev
+
+-- Step 4: Test with verbose SQLcl output
+sql /nolog
+SQL> SET CLOUDCONFIG /path/to/wallet.zip
+SQL> conn admin@myatp_high
+
+-- Step 5: Check for keystore corruption — delete and re-save
+cm delete -conn adb_dev
+conn -save adb_dev -savepwd admin/NewPass@myatp_high</pre>
+            </div>
+
+            <h3>9.3 Multiple SQLcl versions side-by-side</h3>
+            <p>Oracle 26ai development sometimes requires testing against both SQLcl 24.x and SQLcl 25.x. Each version uses the same <code>~/.sqlcl</code> directory, but you can isolate per version with <code>SQLCL_HOME</code>:</p>
+            <div class="code-block" data-lang="bash">
+                <pre># Isolate connection store for a specific SQLcl version
+export SQLCL_HOME=/home/oracle/.sqlcl_v25
+/opt/sqlcl_v25/bin/sql -name dev26ai</pre>
+            </div>
+        </section>
+
+        <!-- Section 10: Quick Reference -->
+        <section id="cheatsheet" class="section">
+            <h2>10. Quick Reference — Command Cheat Sheet</h2>
+            <div class="card-grid">
+                <div class="card primary">
+                    <h4>Save &amp; Connect</h4>
+                    <div class="code-block" style="margin:0.5rem 0" data-lang="sql">
+                        <pre>conn -save &lt;name&gt; -savepwd &lt;str&gt;
+sql -name &lt;name&gt;
+conn -save &lt;n&gt; -replace -savepwd &lt;str&gt;</pre>
+                    </div>
+                </div>
+                <div class="card secondary">
+                    <h4>Inspect</h4>
+                    <div class="code-block" style="margin:0.5rem 0" data-lang="sql">
+                        <pre>cm list
+cm show &lt;name&gt;
+cm test &lt;name&gt;</pre>
+                    </div>
+                </div>
+                <div class="card accent">
+                    <h4>Manage</h4>
+                    <div class="code-block" style="margin:0.5rem 0" data-lang="sql">
+                        <pre>cm delete -conn &lt;name&gt;
+cm export &gt; file.json
+cm import file.json</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 11 -->
+        <section id="conclusion" class="section">
+            <h2>11. Conclusion</h2>
+            <p>SQLcl Connection Manager is a small feature with outsized impact for Oracle 26ai development workflows. For individual developers, it eliminates the cognitive overhead of managing multiple connection strings across different environments. For DBAs, it provides a consistent, testable connection baseline. For AI and automation workloads — particularly the SQLcl MCP server integration with Claude Desktop and the Oracle AI Optimizer — it is architecturally essential: the <code>-savepwd</code> requirement makes it a hard dependency, not an optional convenience.</p>
+            <p>As Oracle 26ai continues to expand its AI-native capabilities — vector indexing, SELECT AI, DBMS_VECTOR, and the emerging RAG-over-MCP architecture — having a clean, named connection strategy from day one will save you from an entire class of connectivity debugging that distracts from the actual work.</p>
+            <p><strong>If you are building on Oracle 26ai today, establish your Connection Manager entries as the very first step. Everything else builds on top of them.</strong></p>
+
+            <h3>References</h3>
+            <ul style="padding-left:1.25rem;color:var(--text-secondary);font-size:0.9rem;line-height:2">
+                <li>Jolliffe, C. (2025). <em>CM Basics — SQLcl Connection Manager.</em> <a href="https://blog.jolliffe.hk/2025/04/23/cm-basics.html" target="_blank" style="color:var(--primary-blue)">blog.jolliffe.hk</a></li>
+                <li>Oracle Corporation. <em>SQLcl Documentation and Downloads.</em> <a href="https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/" target="_blank" style="color:var(--primary-blue)">oracle.com/sqlcl</a></li>
+                <li>Oracle Database 26ai — VECTOR Datatype and HNSW Index Documentation. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/" target="_blank" style="color:var(--primary-blue)">docs.oracle.com</a></li>
+                <li>Oracle AI Optimizer and Server — Developer Guide. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/aimla/" target="_blank" style="color:var(--primary-blue)">docs.oracle.com/aimla</a></li>
+                <li>Model Context Protocol (MCP) Specification — Anthropic. <a href="https://modelcontextprotocol.io/" target="_blank" style="color:var(--primary-blue)">modelcontextprotocol.io</a></li>
+            </ul>
+
+            <div class="article-nav">
+                <a href="./oci-autonomous-terraform.html" class="prev">
+                    <span class="label">&#8592; Previous Article</span>
+                    <span class="title">Oracle ADB + ORM Stack with Terraform</span>
+                </a>
+                <a href="./works.html" class="next">
+                    <span class="label">Back to Works &#8594;</span>
+                    <span class="title">View all projects</span>
+                </a>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer-inner">
+            <p>&copy; 2025 All rights reserved | Personal web development</p>
+            <div class="footer-links">
+                <a href="./index.html">Home</a>
+                <a href="./works.html">Works</a>
+                <a href="./about.html">About</a>
+                <a href="./contact.html">Contact</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // Highlight active nav section on scroll
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav a');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(l => l.classList.remove('active'));
+                const active = document.querySelector(`.nav a[href="#${entry.target.id}"]`);
+                if (active) active.classList.add('active');
+            }
+        });
+    }, { threshold: 0.3 });
+    sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
