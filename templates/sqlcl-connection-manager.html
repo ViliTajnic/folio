@@ -753,13 +753,13 @@ jobs:
       oracle26ai:
         image: container-registry.oracle.com/database/free:latest
         env:
-          ORACLE_PWD: ${{ secrets.ORACLE_PWD }}
+          ORACLE_PWD: $&#123;&#123; secrets.ORACLE_PWD &#125;&#125;
         ports: ['1521:1521']
     steps:
       - uses: actions/checkout@v4
       - name: Setup SQLcl Connection Manager
         env:
-          DB_PASSWORD: ${{ secrets.ORACLE_PWD }}
+          DB_PASSWORD: $&#123;&#123; secrets.ORACLE_PWD &#125;&#125;
         run: bash scripts/setup_connections.sh
       - name: Run SQL regression tests
         run: |
