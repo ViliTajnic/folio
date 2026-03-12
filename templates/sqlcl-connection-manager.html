@@ -472,7 +472,7 @@ cat ~/.sqlcl/connections.json | python3 -m json.tool</pre>
             <p>The most common pattern for 26ai local development against a containerised or on-premises PDB:</p>
             <div class="code-block" data-lang="sql">
                 <pre>-- Save a local PDB connection with password
-conn -save dev26ai -savepwd system/Oracle123@localhost:1521/freepdb1
+conn -save dev26ai -savepwd system/&lt;your_password&gt;@localhost:1521/freepdb1
 
 -- Verify immediately
 cm test dev26ai</pre>
@@ -483,11 +483,11 @@ cm test dev26ai</pre>
             <div class="code-block" data-lang="shell">
                 <pre>-- Option A: TNS_ADMIN environment variable (preferred for ADB)
 export TNS_ADMIN=/home/oracle/wallets/adb_dev
-conn -save adb_dev -savepwd admin/MySecurePass1@myatp_high
+conn -save adb_dev -savepwd admin/&lt;your_password&gt;@myatp_high
 
 -- Option B: Inline wallet reference
 conn -save adb_dev -savepwd \
-  'admin/MySecurePass1@(description=(retry_count=20)(retry_delay=3)
+  'admin/&lt;your_password&gt;@(description=(retry_count=20)(retry_delay=3)
    (address=(protocol=tcps)(port=1522)(host=adb.eu-frankfurt-1.oraclecloud.com))
    (connect_data=(service_name=&lt;your_ocid&gt;_high.adb.oraclecloud.com))
    (security=(ssl_server_dn_match=yes)(my_wallet_directory=/wallets/adb_dev)))'
@@ -504,24 +504,24 @@ cm test adb_dev</pre>
             <p>When running Oracle 26ai on Oracle Kubernetes Engine (OKE) with a service exposed on a NodePort or via <code>kubectl port-forward</code>:</p>
             <div class="code-block" data-lang="sql">
                 <pre>-- Assuming kubectl port-forward svc/oracle-db 1521:1521 is active
-conn -save oke_prod -savepwd system/Oracle123@127.0.0.1:1521/FREEPDB1
+conn -save oke_prod -savepwd system/&lt;your_password&gt;@127.0.0.1:1521/FREEPDB1
 
 -- Or for a NodePort on the OKE worker node IP
-conn -save oke_prod -savepwd system/Oracle123@&lt;node_ip&gt;:30521/FREEPDB1</pre>
+conn -save oke_prod -savepwd system/&lt;your_password&gt;@&lt;node_ip&gt;:30521/FREEPDB1</pre>
             </div>
 
             <h3>4.4 Oracle 23ai / 26ai with TNS Alias</h3>
             <p>If you maintain a <code>tnsnames.ora</code> file, you can save connections using TNS aliases directly. Ideal for teams sharing a centralised <code>tnsnames.ora</code>:</p>
             <div class="code-block" data-lang="sql">
                 <pre>-- Assuming TNS_ADMIN is set and tnsnames.ora defines 'db26ai_dev'
-conn -save db26ai_dev -savepwd hr/Oracle123@db26ai_dev</pre>
+conn -save db26ai_dev -savepwd hr/&lt;your_password&gt;@db26ai_dev</pre>
             </div>
 
             <h3>4.5 Proxy (Application User) Connections</h3>
             <p>Oracle 26ai supports proxy authentication — useful when an app schema user connects through a proxy account. Connection Manager supports this natively:</p>
             <div class="code-block" data-lang="sql">
                 <pre>-- Proxy connection: connect as appuser through proxyaccount
-conn -save app_proxy -savepwd appuser[proxyaccount]/ProxyPass@localhost:1521/freepdb1</pre>
+conn -save app_proxy -savepwd appuser[proxyaccount]/&lt;your_password&gt;@localhost:1521/freepdb1</pre>
             </div>
         </section>
 
@@ -571,7 +571,7 @@ done</pre>
             <p>The <code>-replace</code> flag updates an existing entry without needing to delete and recreate it:</p>
             <div class="code-block" data-lang="sql">
                 <pre>-- Update password after rotation
-conn -save dev26ai -replace -savepwd system/NewPassword123@localhost:1521/freepdb1
+conn -save dev26ai -replace -savepwd system/&lt;your_new_password&gt;@localhost:1521/freepdb1
 
 -- Confirm the update worked
 cm test dev26ai</pre>
@@ -647,13 +647,13 @@ cm list</pre>
             <h3>Recommended naming convention for AI workloads</h3>
             <div class="code-block" data-lang="sql">
                 <pre>-- Vector store database (26ai with HNSW indexes)
-conn -save vs_dev -savepwd vector_admin/VecPass123@localhost:1521/freepdb1
+conn -save vs_dev -savepwd vector_admin/&lt;your_password&gt;@localhost:1521/freepdb1
 
 -- Oracle AI Optimizer metadata schema
-conn -save ai_opt -savepwd ai_opt_user/OptPass123@localhost:1521/freepdb1
+conn -save ai_opt -savepwd ai_opt_user/&lt;your_password&gt;@localhost:1521/freepdb1
 
 -- Production ADB vector store
-conn -save vs_prod -savepwd admin/ProdPass123@myadb_medium
+conn -save vs_prod -savepwd admin/&lt;your_password&gt;@myadb_medium
 
 -- Verify vector memory configuration after connecting
 sql -name vs_dev
@@ -737,8 +737,8 @@ cm export > ~/dotfiles/oracle_connections.json
 cm import ~/dotfiles/oracle_connections.json
 
 -- Then add passwords individually
-conn -save dev26ai -replace -savepwd system/MyLocalPwd@localhost:1521/freepdb1
-conn -save adb_dev  -replace -savepwd admin/MyAdbPwd@myatp_high</pre>
+conn -save dev26ai -replace -savepwd system/&lt;your_password&gt;@localhost:1521/freepdb1
+conn -save adb_dev  -replace -savepwd admin/&lt;your_password&gt;@myatp_high</pre>
             </div>
 
             <h3>8.3 GitHub Actions workflow example</h3>
@@ -808,7 +808,7 @@ SQL> conn admin@myatp_high
 
 -- Step 5: Check for keystore corruption — delete and re-save
 cm delete -conn adb_dev
-conn -save adb_dev -savepwd admin/NewPass@myatp_high</pre>
+conn -save adb_dev -savepwd admin/&lt;your_password&gt;@myatp_high</pre>
             </div>
 
             <h3>9.3 Multiple SQLcl versions side-by-side</h3>
