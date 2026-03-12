@@ -1,228 +1,135 @@
-<!DOCTYPE html>
-<html lang="en">
-
+<!DOCTYPE HTML>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta content="IE=edge" http-equiv="X-UA-Compatible">
-  <meta content="width=device-width,initial-scale=1" name="viewport">
-  <meta content="description" name="description">
-  <meta name="google" content="notranslate" />
-  <meta content="personal web development - website development" name="author">
+    <title>Works &amp; Projects — Vili Tajnic</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="./static/assets/css/main.css" />
+</head>
+<body class="is-preload">
+<div id="wrapper">
 
-  <!-- Disable tap highlight on IE -->
-  <meta name="msapplication-tap-highlight" content="no">
+    <!-- Main -->
+    <div id="main">
+        <div class="inner">
 
-  <link rel="apple-touch-icon" sizes="180x180" href="./static/assets/apple-icon-180x180.png">
-  <link href="./static/python.ico" rel="icon">
+            <!-- Header -->
+            <header id="header">
+                <a href="./index.html" class="logo"><strong>Vili Tajnic</strong> — Oracle &amp; Python Engineer</a>
+                <ul class="icons">
+                    <li><a href="https://twitter.com/vilita" class="icon brands fa-twitter" target="_blank"><span class="label">Twitter</span></a></li>
+                    <li><a href="https://www.linkedin.com/in/vilit/" class="icon brands fa-linkedin" target="_blank"><span class="label">LinkedIn</span></a></li>
+                    <li><a href="https://github.com/ViliTajnic" class="icon brands fa-github" target="_blank"><span class="label">GitHub</span></a></li>
+                </ul>
+            </header>
 
-  <title>My Works</title>
+            <!-- Content -->
+            <section>
+                <header class="main">
+                    <h1>Works &amp; Projects</h1>
+                </header>
 
-<link href="./static/main.3f6952e4.css" rel="stylesheet"></head>
+                <p>Here are my Python development and Oracle Cloud projects. A mix of practical tools, web development, cloud infrastructure, and technical articles.</p>
 
-<body class="">
-<div id="site-border-left"></div>
-<div id="site-border-right"></div>
-<div id="site-border-top"></div>
-<div id="site-border-bottom"></div>
- <!-- Add your content of header -->
-<header>
-  <nav class="navbar  navbar-fixed-top navbar-default">
-    <div class="container">
-        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse" aria-expanded="false">
-          <span class="sr-only">Toggle navigation</span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-        </button>
+                <div class="posts">
+                    <article>
+                        <a href="./work.html" class="image"><img src="./static/assets/images/work01-hover.jpg" alt="" /></a>
+                        <h3>001 — Password Checker in Python</h3>
+                        <p>A Python script that uses the Have I Been Pwned API (pwnedpasswords.com) to check if a password has been exposed in a data breach. The clever k-anonymity model ensures your actual password is never sent over the internet — only a partial SHA-1 hash is transmitted for comparison.</p>
+                        <ul class="actions">
+                            <li><a href="./work.html" class="button">Discover</a></li>
+                        </ul>
+                    </article>
+                    <article>
+                        <a href="./work2.html" class="image"><img src="./static/assets/images/work02-hover.jpg" alt="" /></a>
+                        <h3>002 — Flask Presentation Website</h3>
+                        <p>This portfolio website itself, built with Python and Flask. Features dynamic URL routing, Jinja2 templating, a contact form with database storage, and deployment on PythonAnywhere. Demonstrates Flask's power as a lightweight but capable web framework.</p>
+                        <ul class="actions">
+                            <li><a href="./work2.html" class="button">Discover</a></li>
+                        </ul>
+                    </article>
+                    <article>
+                        <a href="./work3.html" class="image"><img src="./static/assets/images/work03-hover.jpg" alt="" /></a>
+                        <h3>003 — Web Scraper with BeautifulSoup</h3>
+                        <p>A Python web scraper using BeautifulSoup and Requests to extract articles from Hacker News, sorted by vote count. Demonstrates real-world data extraction, HTML parsing, and data sorting techniques in a clean, readable Python script.</p>
+                        <ul class="actions">
+                            <li><a href="./work3.html" class="button">Discover</a></li>
+                        </ul>
+                    </article>
+                    <article>
+                        <a href="./oci-autonomous-terraform.html" class="image"><img src="./static/assets/images/work01-hover.jpg" alt="" /></a>
+                        <h3>004 — Oracle ADB + ORM Stack</h3>
+                        <p>A complete Infrastructure-as-Code solution for deploying Oracle Autonomous Database on Oracle Cloud Infrastructure using Resource Manager Stack and Terraform. Includes a GitHub repository with step-by-step documentation for enterprise-grade database infrastructure.</p>
+                        <ul class="actions">
+                            <li><a href="./oci-autonomous-terraform.html" class="button">Discover</a></li>
+                        </ul>
+                    </article>
+                    <article>
+                        <a href="./sqlcl-connection-manager.html" class="image"><img src="./static/assets/images/work02-hover.jpg" alt="" /></a>
+                        <h3>005 — SQLcl Connection Manager Article</h3>
+                        <p>A technical deep dive for Oracle 26ai developers and DBAs on managing multi-environment Oracle connections with SQLcl Connection Manager. Covers wallet-based ADB access, MCP server integration with Claude Desktop, and CI/CD automation patterns.</p>
+                        <ul class="actions">
+                            <li><a href="./sqlcl-connection-manager.html" class="button">Discover</a></li>
+                        </ul>
+                    </article>
+                </div>
+            </section>
 
-      <div class="collapse navbar-collapse" id="navbar-collapse">
-        <ul class="nav navbar-nav ">
-          <li><a href="./index.html" title="">01 : Home</a></li>
-          <li><a href="./works.html" title="">02 : Works</a></li>
-          <li><a href="./about.html" title="">03 : About me</a></li>
-          <li><a href="./contact.html" title="">04 : Contact</a></li>
-        </ul>
-
-
-      </div>
-    </div>
-  </nav>
-</header>
-
-<div class="section-container">
-  <div class="container">
-    <div class="row">
-
-      <div class="col-sm-8 col-sm-offset-2 section-container-spacer">
-        <div class="text-center">
-          <h1 class="h2">02 : Works</h1>
-          <p>I would like to present you my Python development projects. Some of them are done just for fun and education purposes. These are just presentations of those done purely in Python. More to come … soon!</p>
         </div>
-      </div>
+    </div>
 
-      <div class="col-md-12">
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="inner">
 
-      <div id="myCarousel" class="carousel slide projects-carousel">
-        <!-- Carousel items -->
-        <div class="carousel-inner">
-            <div class="item active">
-                <div class="row">
-                    <div class="col-sm-4">
+            <!-- Menu -->
+            <nav id="menu">
+                <header class="major">
+                    <h2>Menu</h2>
+                </header>
+                <ul>
+                    <li><a href="./index.html">Home</a></li>
+                    <li><a href="./about.html">About Me</a></li>
+                    <li>
+                        <span class="opener">Works</span>
+                        <ul>
+                            <li><a href="./works.html">All Projects</a></li>
+                            <li><a href="./work.html">001 — Password Checker</a></li>
+                            <li><a href="./work2.html">002 — Flask Website</a></li>
+                            <li><a href="./work3.html">003 — Web Scraper</a></li>
+                            <li><a href="./oci-autonomous-terraform.html">004 — OCI Terraform</a></li>
+                            <li><a href="./sqlcl-connection-manager.html">005 — SQLcl CM Article</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="./contact.html">Contact</a></li>
+                </ul>
+            </nav>
 
-                      <a href="./work.html" title="" class="black-image-project-hover">
-                        <img src="./static/assets/images/work01-hover.jpg" alt="" class="img-responsive">
-                      </a>
-                      <div class="card-container card-container-lg">
-                        <h4>001/005</h4>
-                        <h3>Password checker in Python</h3>
-                        <p>Python script to check your password security through API on pwnedpasswords.com.</p>
-                        <a href="./work.html" title="" class="btn btn-default">Discover</a>
-                      </div>
-                    </div>
-                    <div class="col-sm-4">
-                      <a href="./work2.html" title="" class="black-image-project-hover">
-                        <img src="./static/assets/images/work02-hover.jpg" alt="" class="img-responsive">
-                      </a>
-                      <div class="card-container card-container-lg">
-                        <h4>002/005</h4>
-                        <h3>Presentation website running on Flask</h3>
-                        <p>This website is running on a Flask with custom writen application functions.</p>
-                        <a href="./work2.html" title="" class="btn btn-default">Discover</a>
-                      </div>
-                    </div>
-                    <div class="col-sm-4">
-                      <a href="./work3.html" title="" class="black-image-project-hover">
-                        <img src="./static/assets/images/work03-hover.jpg" alt="" class="img-responsive">
-                      </a>
-                      <div class="card-container card-container-lg">
-                        <h4>003/005</h4>
-                        <h3>Webscraper Python script with BeautifulSoup module</h3>
-                        <p>Python script is using BeautifulSoup module to download the links and the Titles of news.</p>
-                        <a href="./work3.html" title="" class="btn btn-default">Discover</a>
-                      </div>
-                    </div>
+            <!-- Contact -->
+            <section>
+                <header class="major">
+                    <h2>Get in touch</h2>
+                </header>
+                <ul class="contact">
+                    <li class="icon solid fa-envelope"><a href="mailto:vili.tajnic@gmail.com">vili.tajnic@gmail.com</a></li>
+                    <li class="icon solid fa-phone">+43133777150</li>
+                    <li class="icon solid fa-home">Ljubljana, Slovenia</li>
+                </ul>
+            </section>
 
-                </div>
-                <!--/row-->
-            </div>
-            <!--/item-->
-            <div class="item">
-                <div class="row">
-                    <div class="col-sm-4">
-                      <a href="./oci-autonomous-terraform.html" title="" class="black-image-project-hover">
-                        <img src="./static/assets/images/work01-hover.jpg" alt="" class="img-responsive">
-                      </a>
-                      <div class="card-container card-container-lg">
-                        <h4>004/005</h4>
-                        <h3>Oracle ADB + ORM Stack with Terraform</h3>
-                        <p>Deploy Oracle Autonomous Database infrastructure on OCI using Resource Manager Stack and Terraform IaC.</p>
-                        <a href="./oci-autonomous-terraform.html" title="" class="btn btn-default">Discover</a>
-                      </div>
-                    </div>
-                    <div class="col-sm-4">
-                      <a href="./sqlcl-connection-manager.html" title="" class="black-image-project-hover">
-                        <img src="./static/assets/images/work02-hover.jpg" alt="" class="img-responsive">
-                      </a>
-                      <div class="card-container card-container-lg">
-                        <h4>005/005</h4>
-                        <h3>SQLcl Connection Manager — Oracle 26ai Deep Dive</h3>
-                        <p>Technical deep dive into SQLcl CM for multi-environment Oracle connections, wallet-based ADB access, MCP server, and CI/CD automation.</p>
-                        <a href="./sqlcl-connection-manager.html" title="" class="btn btn-default">Discover</a>
-                      </div>
-                    </div>
-                </div>
-            </div>
-            <!--/item-->
-            <!--<div class="item">
-                <div class="row">
-                  <div class="col-sm-4">
-                    <a href="./work.html" class="black-image-project-hover">
-                      <img src="./static/assets/images/work02-hover.jpg" alt="Image" class="img-responsive">
-                    </a>
-                    <div class="card-container">
-                      <h4>004/006</h4>
-                      <h3>Nulla scelerisque</h3>
-                      <p>Proin pharetra metus id iaculis dignissim. In aliquet lorem ut ex ullamcorper.</p>
-                      <a href="./work.html" class="btn btn-default">Discover</a>
-                    </div>
-                  </div>
-                   <div class="col-sm-4">
-                      <a href="./work.html" class="black-image-project-hover">
-                        <img src="./static/assets/images/work01-hover.jpg" alt="Image" class="img-responsive">
-                      </a>
-                      <div class="card-container">
-                        <h4>005/006</h4>
-                        <h3>Fringilla sit amet</h3>
-                        <p>Nulla facilisi. Vivamus vestibulum, elit in scelerisque ultricies.</p>
-                        <a href="./work.html" class="btn btn-default">Discover</a>
-                      </div>
-                    </div>
+            <!-- Footer -->
+            <footer id="footer">
+                <p class="copyright">&copy; 2025 Vili Tajnic. Design: <a href="https://html5up.net">HTML5 UP</a>.</p>
+            </footer>
 
-                    <div class="col-sm-4">
-                      <a href="./work.html" class="black-image-project-hover">
-                        <img src="./static/assets/images/work03-hover.jpg" alt="Image" class="img-responsive">
-                      </a>
-                      <div class="card-container">
-                        <h4>006/006</h4>
-                        <h3>Vivamus vestibulum</h3>
-                        <p>Fusce sed hendrerit augue, a rhoncus velit. In non lorem mattis, tempor sem sit amet.</p>
-                        <a href="./work.html" class="btn btn-default">Discover</a>
-                      </div>
-                    </div> -->
-
-                </div>
-                <!--/row-->
-            </div>
-
-            <!--/item-->
         </div>
-        <!--/carousel-inner-->
-        <a class="left carousel-control" href="#myCarousel" data-slide="prev">‹</a>
-
-        <a class="right carousel-control" href="#myCarousel" data-slide="next">›</a>
-     </div>
-
-
-
-    <!--/myCarousel-->
     </div>
 
-
-
-    </div>
-  </div>
 </div>
-
-
-<footer class="footer-container text-center">
-  <div class="container">
-    <div class="row">
-      <div class="col-xs-12">
-         <p>© 2025 All rights reserverd | Website developed by <a href="" title="AWS/GCP coud solutions">personal web development</a>/<a href="https://xhost.pythonanywhere.com/" title="nologies"></a></p>
-      </div>
-    </div>
-  </div>
-</footer>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function (event) {
-     navActivePage();
-  });
-</script>
-
-<!-- Google Analytics: change UA-XXXXX-X to be your site's ID
-
-<script>
-  (function (i, s, o, g, r, a, m) {
-    i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments)
-    }, i[r].l = 1 * new Date(); a = s.createElement(o),
-      m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
-  })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
-  ga('create', 'UA-XXXXX-X', 'auto');
-  ga('send', 'pageview');
-</script>
-
---> <script type="text/javascript" src="./static/main.70a66962.js"></script></body>
-
+<script src="./static/assets/js/jquery.min.js"></script>
+<script src="./static/assets/js/browser.min.js"></script>
+<script src="./static/assets/js/breakpoints.min.js"></script>
+<script src="./static/assets/js/util.js"></script>
+<script src="./static/assets/js/main.js"></script>
+</body>
 </html>
