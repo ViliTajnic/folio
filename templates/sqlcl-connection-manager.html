@@ -8,12 +8,8 @@
 </head>
 <body class="is-preload">
 <div id="wrapper">
-
-    <!-- Main -->
     <div id="main">
         <div class="inner">
-
-            <!-- Header -->
             <header id="header">
                 <a href="./index.html" class="logo"><strong>Vili Tajnic</strong> — Oracle &amp; Python Engineer</a>
                 <ul class="icons">
@@ -22,123 +18,449 @@
                     <li><a href="https://github.com/ViliTajnic" class="icon brands fa-github" target="_blank"><span class="label">GitHub</span></a></li>
                 </ul>
             </header>
-
-            <!-- Content -->
             <section>
                 <header class="main">
                     <h1>003 — SQLcl Connection Manager</h1>
                 </header>
-
                 <span class="image main"><img src="./static/assets/images/Image_w3.jpg" alt="" /></span>
 
-                <p>A technical deep dive into SQLcl Connection Manager (CM) for Oracle 26ai developers and DBAs. If your day spans multiple environments — a local containerised 26ai instance, a cloud-hosted PDB on OCI, an Autonomous Database accessed via wallet, and a vector store for AI pipelines — Connection Manager eliminates the tedium of managing all those connection strings manually.</p>
+                <hr class="major" />
+                <h2>1. Why Connection Manager Matters in Oracle 26ai Workflows</h2>
+                <p>If you are a developer or DBA working with Oracle Database 26ai, your day likely spans multiple environments: a local containerised 26ai instance running on Docker or Colima, a cloud-hosted Pluggable Database (PDB) on OCI, an Autonomous Database (ADB) accessed via wallet, and possibly a dedicated vector store for AI pipelines. Manually typing JDBC connection strings, TNS aliases, and wallet paths every single session is not only tedious — it introduces connection errors that are hard to debug under pressure.</p>
+                <p>SQLcl's Connection Manager (CM) solves this completely. It acts as a named connection registry that persists across SQLcl sessions, integrates directly with the <code>-name</code> flag at startup, and — critically for 26ai automation — satisfies the <code>-savepwd</code> requirement needed by the SQLcl MCP server to enable passwordless, automated database access from Claude Desktop and other AI tools.</p>
 
-                <p>SQLcl CM acts as a named connection registry that persists across sessions, integrates with the <code>-name</code> flag at startup, and satisfies the <code>-savepwd</code> requirement for the SQLcl MCP server — making it a hard dependency for any Oracle 26ai AI Optimizer, RAG pipeline, or MCP-based automation workflow.</p>
-
-                <blockquote>The SQLcl MCP server requires a saved connection with stored password (<code>-savepwd</code>) to operate without interactive prompts. Properly configured Connection Manager entries are a prerequisite for any Oracle 26ai AI or automation workflow.</blockquote>
+                <blockquote>
+                    <strong>Key insight for 26ai AI tooling:</strong> The SQLcl MCP server (<code>oracle.sqldeveloper.mcp</code>) requires a saved connection with stored password (<code>-savepwd</code>) to operate without interactive prompts. This means properly configured Connection Manager entries are a prerequisite for any Oracle 26ai AI Optimizer, RAG pipeline, or MCP-based automation workflow.
+                </blockquote>
 
                 <hr class="major" />
+                <h2>2. How Connection Manager Works Under the Hood</h2>
+                <p>Connection Manager stores named connections in a JSON file located in the SQLcl user configuration directory. On Linux and macOS this is typically <code>~/.sqlcl/connections.json</code>. On Windows it sits under <code>%APPDATA%\sqlcl\</code>. The file is not encrypted but passwords — when saved with <code>-savepwd</code> — are obfuscated using a local keystore mechanism tied to your OS user account.</p>
 
-                <h2>Core Commands</h2>
+                <h3>Connection storage location</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Linux / macOS
+~/.sqlcl/connections.json
+
+# Windows
+%APPDATA%\sqlcl\connections.json
+
+# View raw JSON (useful for debugging or backup/restore)
+cat ~/.sqlcl/connections.json | python3 -m json.tool</code></pre>
+
+                <p>Each entry in the JSON contains the connection name, connection string, and a flag indicating whether a password is stored. The actual credential is held in a local Java KeyStore (JKS) file alongside the JSON. This design means that <code>connections.json</code> can be safely committed to a dotfiles repository without exposing passwords — but the keystore cannot be shared across machines.</p>
+
+                <blockquote>
+                    <strong>Tip: Backing up connections across machines</strong> — Export connection strings (without passwords) from <code>connections.json</code> into a version-controlled dotfile. On a new machine, re-import and re-save passwords with <code>-savepwd</code>. This gives you portable, reproducible connection setup without credential exposure.
+                </blockquote>
+
+                <hr class="major" />
+                <h2>3. Core Commands — Complete Reference</h2>
+                <p>The following table covers every Connection Manager command you need as a 26ai developer or DBA.</p>
+
                 <div class="table-wrapper">
                     <table>
                         <thead>
-                            <tr><th>Command</th><th>Description</th></tr>
+                            <tr>
+                                <th>Command</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                            </tr>
                         </thead>
                         <tbody>
-                            <tr><td><code>conn -save &lt;name&gt; -savepwd &lt;connstr&gt;</code></td><td>Save a named connection with stored password</td></tr>
-                            <tr><td><code>conn -save &lt;name&gt; -replace -savepwd &lt;connstr&gt;</code></td><td>Update an existing named connection</td></tr>
-                            <tr><td><code>sql -name &lt;name&gt;</code></td><td>Connect using a saved connection name</td></tr>
-                            <tr><td><code>cm list</code></td><td>List all saved connections</td></tr>
-                            <tr><td><code>cm show &lt;name&gt;</code></td><td>Show connection details</td></tr>
-                            <tr><td><code>cm test &lt;name&gt;</code></td><td>Test connectivity</td></tr>
-                            <tr><td><code>cm delete -conn &lt;name&gt;</code></td><td>Remove a connection</td></tr>
-                            <tr><td><code>cm export &gt; file.json</code></td><td>Export connection names to JSON</td></tr>
-                            <tr><td><code>cm import file.json</code></td><td>Import connections from JSON</td></tr>
+                            <tr>
+                                <td><code>conn -save &lt;name&gt; -savepwd &lt;connstr&gt;</code></td>
+                                <td>Save a new named connection with stored password</td>
+                                <td><code>conn -save dev26ai -savepwd system/pass@localhost:1521/freepdb1</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>conn -save &lt;name&gt; -replace -savepwd &lt;connstr&gt;</code></td>
+                                <td>Update (replace) an existing named connection</td>
+                                <td><code>conn -save dev26ai -replace -savepwd system/newpass@localhost:1521/freepdb1</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>sql -name &lt;name&gt;</code></td>
+                                <td>Connect to a saved connection by name at startup</td>
+                                <td><code>sql -name dev26ai</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>cm list</code></td>
+                                <td>List all saved connection names</td>
+                                <td><code>cm list</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>cm show &lt;name&gt;</code></td>
+                                <td>Show details of a specific connection (no password)</td>
+                                <td><code>cm show dev26ai</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>cm test &lt;name&gt;</code></td>
+                                <td>Test connectivity for a named connection</td>
+                                <td><code>cm test adb_dev</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>cm delete -conn &lt;name&gt;</code></td>
+                                <td>Remove a named connection</td>
+                                <td><code>cm delete -conn oke_prod</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>cm export &gt; &lt;file&gt;</code></td>
+                                <td>Export connection names/strings (no passwords) to JSON</td>
+                                <td><code>cm export &gt; ~/dotfiles/oracle_connections.json</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>cm import &lt;file&gt;</code></td>
+                                <td>Import connections from a JSON file</td>
+                                <td><code>cm import ~/dotfiles/oracle_connections.json</code></td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <hr class="major" />
+                <h2>4. Saving Connections — All Connection Types</h2>
 
-                <h2>Saving Connections</h2>
-                <div class="row">
-                    <div class="col-6 col-12-small">
-                        <h3>Local PDB</h3>
-<pre style="background:#1e293b;color:#e2e8f0;padding:1rem 1.25rem;border-radius:6px;overflow-x:auto;font-size:0.8rem;line-height:1.6;margin:0.5rem 0;"><code>conn -save dev26ai -savepwd \
-  system/&lt;your_password&gt;@localhost:1521/freepdb1
+                <h3>4.1 Local PDB (Development)</h3>
+                <p>The most common pattern for 26ai local development against a containerised or on-premises PDB:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Save a local PDB connection with password
+conn -save dev26ai -savepwd system/&lt;your_password&gt;@localhost:1521/freepdb1
 
+-- Verify immediately
 cm test dev26ai</code></pre>
 
-                        <h3>Autonomous Database (Wallet)</h3>
-<pre style="background:#1e293b;color:#e2e8f0;padding:1rem 1.25rem;border-radius:6px;overflow-x:auto;font-size:0.8rem;line-height:1.6;margin:0.5rem 0;"><code>export TNS_ADMIN=/home/oracle/wallets/adb_dev
+                <h3>4.2 Oracle Autonomous Database (Wallet-based)</h3>
+                <p>Autonomous Database connections require a wallet. SQLcl supports the wallet either via <code>TNS_ADMIN</code> environment variable or inline within the connection string:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Option A: TNS_ADMIN environment variable (preferred for ADB)
+export TNS_ADMIN=/home/oracle/wallets/adb_dev
+conn -save adb_dev -savepwd admin/&lt;your_password&gt;@myatp_high
+
+-- Option B: Inline wallet reference
 conn -save adb_dev -savepwd \
-  admin/&lt;your_password&gt;@myatp_high
+  'admin/&lt;your_password&gt;@(description=(retry_count=20)(retry_delay=3)
+   (address=(protocol=tcps)(port=1522)(host=adb.eu-frankfurt-1.oraclecloud.com))
+   (connect_data=(service_name=&lt;your_ocid&gt;_high.adb.oraclecloud.com))
+   (security=(ssl_server_dn_match=yes)(my_wallet_directory=/wallets/adb_dev)))'
 
+-- Test the ADB connection
 cm test adb_dev</code></pre>
-                    </div>
-                    <div class="col-6 col-12-small">
-                        <h3>Vector Store (Oracle 26ai)</h3>
-<pre style="background:#1e293b;color:#e2e8f0;padding:1rem 1.25rem;border-radius:6px;overflow-x:auto;font-size:0.8rem;line-height:1.6;margin:0.5rem 0;"><code>conn -save vs_dev -savepwd \
-  vector_admin/&lt;your_password&gt;@localhost:1521/freepdb1
 
-conn -save ai_opt -savepwd \
-  ai_opt_user/&lt;your_password&gt;@localhost:1521/freepdb1</code></pre>
+                <blockquote>
+                    <strong>ADB wallet note:</strong> The wallet directory must contain <code>cwallet.sso</code>, <code>ewallet.p12</code>, <code>tnsnames.ora</code>, and <code>sqlnet.ora</code>. When downloaded from OCI Console, extract the .zip directly into your wallet directory. Do not rename any files. The <code>-savepwd</code> flag is mandatory for MCP server usage.
+                </blockquote>
 
-                        <h3>OKE / Kubernetes NodePort</h3>
-<pre style="background:#1e293b;color:#e2e8f0;padding:1rem 1.25rem;border-radius:6px;overflow-x:auto;font-size:0.8rem;line-height:1.6;margin:0.5rem 0;"><code>conn -save oke_prod -savepwd \
-  system/&lt;your_password&gt;@127.0.0.1:1521/FREEPDB1</code></pre>
-                    </div>
-                </div>
+                <h3>4.3 OKE / Kubernetes-hosted PDB (SSH Tunnel or NodePort)</h3>
+                <p>When running Oracle 26ai on Oracle Kubernetes Engine (OKE) with a service exposed on a NodePort or via <code>kubectl port-forward</code>:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Assuming kubectl port-forward svc/oracle-db 1521:1521 is active
+conn -save oke_prod -savepwd system/&lt;your_password&gt;@127.0.0.1:1521/FREEPDB1
+
+-- Or for a NodePort on the OKE worker node IP
+conn -save oke_prod -savepwd system/&lt;your_password&gt;@&lt;node_ip&gt;:30521/FREEPDB1</code></pre>
+
+                <h3>4.4 Oracle 23ai / 26ai with TNS Alias</h3>
+                <p>If you maintain a <code>tnsnames.ora</code> file, you can save connections using TNS aliases directly. Ideal for teams sharing a centralised <code>tnsnames.ora</code>:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Assuming TNS_ADMIN is set and tnsnames.ora defines 'db26ai_dev'
+conn -save db26ai_dev -savepwd hr/&lt;your_password&gt;@db26ai_dev</code></pre>
+
+                <h3>4.5 Proxy (Application User) Connections</h3>
+                <p>Oracle 26ai supports proxy authentication — useful when an app schema user connects through a proxy account. Connection Manager supports this natively:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Proxy connection: connect as appuser through proxyaccount
+conn -save app_proxy -savepwd appuser[proxyaccount]/&lt;your_password&gt;@localhost:1521/freepdb1</code></pre>
 
                 <hr class="major" />
+                <h2>5. Managing Connections — Inspect, Test, Update, Remove</h2>
 
-                <h2>MCP Server Integration — Claude Desktop</h2>
-                <p>Connection Manager is architecturally essential for Oracle 26ai AI workflows. The SQLcl MCP server launches SQLcl as a subprocess with no interactive terminal — the <code>-name</code> flag with a <code>-savepwd</code> connection is the only supported authentication path.</p>
+                <h3>5.1 Listing and Inspecting</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- List all saved connection names
+cm list
 
-<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.82rem;line-height:1.6;margin:1rem 0;"><code>// claude_desktop_config.json
+-- Example output:
+.
+├── adb_dev
+├── db26ai_dev
+├── dev26ai
+└── oke_prod
+
+-- Show details of a specific connection
+cm show dev26ai
+
+-- Example output:
+Name      : dev26ai
+Username  : system
+ConnString: localhost:1521/freepdb1
+SavePwd   : true</code></pre>
+
+                <h3>5.2 Testing Connectivity</h3>
+                <p>Connection testing is particularly valuable in Oracle 26ai pipelines where you need to validate connectivity before triggering a migration, vector ingestion job, or AI pipeline run:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Test a single connection
+cm test dev26ai
+
+-- Batch-test all connections using shell loop
+for conn in dev26ai adb_dev oke_prod db26ai_dev; do
+  echo -n "Testing $conn ... "
+  sql -name $conn -S /nolog &lt;&lt; EOF
+  cm test $conn
+  EXIT
+EOF
+done</code></pre>
+
+                <h3>5.3 Updating Credentials</h3>
+                <p>The <code>-replace</code> flag updates an existing entry without needing to delete and recreate it:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Update password after rotation
+conn -save dev26ai -replace -savepwd system/&lt;your_new_password&gt;@localhost:1521/freepdb1
+
+-- Confirm the update worked
+cm test dev26ai</code></pre>
+
+                <h3>5.4 Deleting Connections</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Remove a named connection
+cm delete -conn oke_prod
+
+-- Verify removal
+cm list</code></pre>
+
+                <hr class="major" />
+                <h2>6. Connection Manager and the SQLcl MCP Server</h2>
+                <p>This is where Connection Manager becomes not just convenient but architecturally essential for Oracle 26ai AI workflows. The SQLcl MCP server — part of the <code>oracle.sqldeveloper.mcp</code> extension — exposes Oracle database tools (query execution, object listing, DDL generation) to AI assistants like Claude Desktop via the Model Context Protocol.</p>
+                <p>The MCP server launches SQLcl as a subprocess using stdio transport. Because there is no interactive terminal, it cannot prompt for passwords. The <code>-name</code> flag combined with a <code>-savepwd</code> connection is the only supported authentication path.</p>
+
+                <h3>Claude Desktop MCP configuration</h3>
+                <p>A typical <code>claude_desktop_config.json</code> entry for the SQLcl MCP server targeting an Oracle 26ai instance:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>// claude_desktop_config.json
 {
   "mcpServers": {
-    "oracle-dev": {
+    "oracle-db": {
       "command": "/opt/sqlcl/bin/sql",
       "args": ["-name", "dev26ai"]
     },
     "oracle-adb": {
       "command": "/opt/sqlcl/bin/sql",
       "args": ["-name", "adb_dev"]
-    },
-    "oracle-vectorstore": {
-      "command": "/opt/sqlcl/bin/sql",
-      "args": ["-name", "vs_dev"]
     }
   }
 }</code></pre>
 
-                <blockquote>Never put credentials in <code>claude_desktop_config.json</code> or MCP server arguments. Using <code>-name</code> keeps credentials out of process argument lists and version-controlled config files.</blockquote>
+                <blockquote>
+                    <strong>Security best practice:</strong> Never put credentials directly in <code>claude_desktop_config.json</code> or in MCP server command arguments. Using <code>-name</code> keeps credentials out of process argument lists (visible via <code>ps aux</code>) and out of version-controlled config files. The Connection Manager keystore is the right credential boundary.
+                </blockquote>
+
+                <h3>Using SQLcl MCP with multiple databases</h3>
+                <p>You can register multiple MCP servers in Claude Desktop, simultaneously exposing your local 26ai dev database, an ADB instance, and a production PDB — each as a separate MCP server:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>// Multi-DB claude_desktop_config.json
+{
+  "mcpServers": {
+    "oracle-dev": {
+      "command": "/opt/sqlcl/bin/sql",
+      "args": ["-name", "dev26ai"]
+    },
+    "oracle-adb-prod": {
+      "command": "/opt/sqlcl/bin/sql",
+      "args": ["-name", "adb_dev"]
+    },
+    "oracle-vectorstore": {
+      "command": "/opt/sqlcl/bin/sql",
+      "args": ["-name", "db26ai_dev"]
+    }
+  }
+}</code></pre>
 
                 <hr class="major" />
+                <h2>7. Vector Store Connections for Oracle 26ai AI Pipelines</h2>
+                <p>Oracle Database 26ai elevates vector search to a first-class citizen with HNSW and IVF indexing, the <code>VECTOR</code> datatype, and the <code>DBMS_VECTOR</code> package. When you build RAG pipelines — whether using LangChain, Spring AI, or the Oracle AI Optimizer — your embedding ingestion and retrieval scripts connect to the vector store database repeatedly.</p>
 
-                <h2>CI/CD Automation</h2>
-                <p>For headless environments and GitHub Actions pipelines, connection entries can be bootstrapped without manual interaction:</p>
+                <h3>Recommended naming convention for AI workloads</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Vector store database (26ai with HNSW indexes)
+conn -save vs_dev -savepwd vector_admin/&lt;your_password&gt;@localhost:1521/freepdb1
 
-<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.82rem;line-height:1.6;margin:1rem 0;"><code>#!/bin/bash
-# setup_connections.sh
+-- Oracle AI Optimizer metadata schema
+conn -save ai_opt -savepwd ai_opt_user/&lt;your_password&gt;@localhost:1521/freepdb1
+
+-- Production ADB vector store
+conn -save vs_prod -savepwd admin/&lt;your_password&gt;@myadb_medium
+
+-- Verify vector memory configuration after connecting
+sql -name vs_dev
+SQL> SELECT value FROM v$parameter WHERE name = 'vector_memory_size';
+SQL> SELECT index_name, index_type FROM user_indexes WHERE index_type LIKE '%VECTOR%';</code></pre>
+
+                <h3>Python integration via subprocess</h3>
+                <p>Oracle AI Optimizer scripts and LangChain-based embedding pipelines often invoke SQLcl programmatically. Connection Manager names make this clean and portable:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>import subprocess
+import sys
+
+def run_sqlcl(conn_name: str, sql: str) -> str:
+    """Execute SQL via SQLcl named connection, return stdout."""
+    result = subprocess.run(
+        ['/opt/sqlcl/bin/sql', '-name', conn_name, '-S', '/nolog'],
+        input=f"{sql}\nEXIT;",
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f'SQLcl error: {result.stderr}')
+    return result.stdout
+
+# Query vector index status on dev
+output = run_sqlcl('vs_dev',
+    "SELECT index_name, index_type, status FROM user_indexes"
+    " WHERE index_type LIKE '%VECTOR%'")
+print(output)</code></pre>
+
+                <hr class="major" />
+                <h2>8. Automating Connection Setup — CI/CD and Team Onboarding</h2>
+                <p>In team environments or CI/CD pipelines running Oracle 26ai integration tests, you need a repeatable way to bootstrap Connection Manager entries without manual interaction.</p>
+
+                <h3>8.1 Headless connection setup script</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>#!/bin/bash
+# setup_connections.sh — run once per environment
+# Requires: DB_PASSWORD and ADB_PASSWORD env vars set
+set -euo pipefail
 SQLCL=/opt/sqlcl/bin/sql
 
+echo "Setting up SQLcl Connection Manager entries..."
+
+# Local 26ai dev PDB
 $SQLCL -S /nolog &lt;&lt; EOF
 conn -save dev26ai -replace -savepwd system/${DB_PASSWORD}@localhost:1521/freepdb1
 cm test dev26ai
 EXIT
-EOF</code></pre>
+EOF
+
+# Vector store connection
+$SQLCL -S /nolog &lt;&lt; EOF
+conn -save vs_dev -replace -savepwd vector_admin/${DB_PASSWORD}@localhost:1521/freepdb1
+cm test vs_dev
+EXIT
+EOF
+
+# ADB (TNS_ADMIN must be pre-configured)
+export TNS_ADMIN=/wallets/adb_dev
+$SQLCL -S /nolog &lt;&lt; EOF
+conn -save adb_dev -replace -savepwd admin/${ADB_PASSWORD}@myatp_high
+cm test adb_dev
+EXIT
+EOF
+
+echo "All connections configured successfully."</code></pre>
+
+                <h3>8.2 Exporting and importing connections</h3>
+                <p>For team onboarding, export connection names (structure only, no passwords) and share via a repository:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Export (run inside SQLcl)
+cm export > ~/dotfiles/oracle_connections.json
+
+-- Import on a new machine
+cm import ~/dotfiles/oracle_connections.json
+
+-- Then add passwords individually
+conn -save dev26ai -replace -savepwd system/&lt;your_password&gt;@localhost:1521/freepdb1
+conn -save adb_dev  -replace -savepwd admin/&lt;your_password&gt;@myatp_high</code></pre>
+
+                <h3>8.3 GitHub Actions workflow example</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># .github/workflows/oracle26ai-test.yml
+name: Oracle 26ai Integration Tests
+on: [push, pull_request]
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    services:
+      oracle26ai:
+        image: container-registry.oracle.com/database/free:latest
+        env:
+          ORACLE_PWD: $&#123;&#123; secrets.ORACLE_PWD &#125;&#125;
+        ports: ['1521:1521']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup SQLcl Connection Manager
+        env:
+          DB_PASSWORD: $&#123;&#123; secrets.ORACLE_PWD &#125;&#125;
+        run: bash scripts/setup_connections.sh
+      - name: Run SQL regression tests
+        run: |
+          sql -name dev26ai -S @tests/regression_suite.sql</code></pre>
 
                 <hr class="major" />
+                <h2>9. Advanced Patterns and Diagnostics</h2>
 
-                <h2>References</h2>
+                <h3>9.1 Environment-specific connection switching</h3>
+                <p>Use shell environment variables to drive connection selection, making scripts portable across dev/staging/prod:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>#!/bin/bash
+# deploy_schema.sh
+ENV=${1:-dev}  # default to dev
+case $ENV in
+  dev)     CONN=dev26ai  ;;
+  staging) CONN=vs_dev   ;;
+  prod)    CONN=adb_dev  ;;
+  *)       echo "Unknown env: $ENV"; exit 1 ;;
+esac
+
+echo "Deploying schema to: $CONN ($ENV)"
+sql -name $CONN @schema/deploy.sql</code></pre>
+
+                <h3>9.2 Diagnosing ECONNREFUSED and wallet errors</h3>
+                <p>When <code>cm test</code> returns an error, the following diagnostic sequence isolates the cause quickly:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Step 1: Confirm the listener is reachable
+nc -zv localhost 1521
+
+-- Step 2: Check TNS_ADMIN for wallet-based connections
+ls -la $TNS_ADMIN
+# Must contain: cwallet.sso  ewallet.p12  sqlnet.ora  tnsnames.ora
+
+-- Step 3: Verify the saved connection string
+cm show adb_dev
+
+-- Step 4: Test with verbose SQLcl output
+sql /nolog
+SQL> SET CLOUDCONFIG /path/to/wallet.zip
+SQL> conn admin@myatp_high
+
+-- Step 5: Check for keystore corruption — delete and re-save
+cm delete -conn adb_dev
+conn -save adb_dev -savepwd admin/&lt;your_password&gt;@myatp_high</code></pre>
+
+                <h3>9.3 Multiple SQLcl versions side-by-side</h3>
+                <p>Oracle 26ai development sometimes requires testing against both SQLcl 24.x and SQLcl 25.x. Each version uses the same <code>~/.sqlcl</code> directory, but you can isolate per version with <code>SQLCL_HOME</code>:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Isolate connection store for a specific SQLcl version
+export SQLCL_HOME=/home/oracle/.sqlcl_v25
+/opt/sqlcl_v25/bin/sql -name dev26ai</code></pre>
+
+                <hr class="major" />
+                <h2>10. Quick Reference — Command Cheat Sheet</h2>
+
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Save &amp; Connect</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>conn -save &lt;name&gt; -savepwd &lt;str&gt;
+sql -name &lt;name&gt;
+conn -save &lt;n&gt; -replace -savepwd &lt;str&gt;</code></pre>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>Inspect</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>cm list
+cm show &lt;name&gt;
+cm test &lt;name&gt;</code></pre>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Manage</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>cm delete -conn &lt;name&gt;
+cm export &gt; file.json
+cm import file.json</code></pre>
+                    </div>
+                </div>
+
+                <hr class="major" />
+                <h2>11. Conclusion</h2>
+                <p>SQLcl Connection Manager is a small feature with outsized impact for Oracle 26ai development workflows. For individual developers, it eliminates the cognitive overhead of managing multiple connection strings across different environments. For DBAs, it provides a consistent, testable connection baseline. For AI and automation workloads — particularly the SQLcl MCP server integration with Claude Desktop and the Oracle AI Optimizer — it is architecturally essential: the <code>-savepwd</code> requirement makes it a hard dependency, not an optional convenience.</p>
+                <p>As Oracle 26ai continues to expand its AI-native capabilities — vector indexing, SELECT AI, DBMS_VECTOR, and the emerging RAG-over-MCP architecture — having a clean, named connection strategy from day one will save you from an entire class of connectivity debugging that distracts from the actual work.</p>
+                <p><strong>If you are building on Oracle 26ai today, establish your Connection Manager entries as the very first step. Everything else builds on top of them.</strong></p>
+
+                <h3>References</h3>
                 <ul>
-                    <li>Jolliffe, C. (2025). <a href="https://blog.jolliffe.hk/2025/04/23/cm-basics.html" target="_blank">CM Basics — SQLcl Connection Manager</a></li>
-                    <li><a href="https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/" target="_blank">Oracle SQLcl Documentation</a></li>
-                    <li><a href="https://docs.oracle.com/en/database/oracle/oracle-database/" target="_blank">Oracle Database 26ai — VECTOR Datatype and HNSW Index</a></li>
-                    <li><a href="https://modelcontextprotocol.io/" target="_blank">Model Context Protocol (MCP) Specification</a></li>
+                    <li>Jolliffe, C. (2025). <em>CM Basics — SQLcl Connection Manager.</em> <a href="https://blog.jolliffe.hk/2025/04/23/cm-basics.html" target="_blank">blog.jolliffe.hk</a></li>
+                    <li>Oracle Corporation. <em>SQLcl Documentation and Downloads.</em> <a href="https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/" target="_blank">oracle.com/sqlcl</a></li>
+                    <li>Oracle Database 26ai — VECTOR Datatype and HNSW Index Documentation. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/" target="_blank">docs.oracle.com</a></li>
+                    <li>Oracle AI Optimizer and Server — Developer Guide. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/aimla/" target="_blank">docs.oracle.com/aimla</a></li>
+                    <li>Model Context Protocol (MCP) Specification — Anthropic. <a href="https://modelcontextprotocol.io/" target="_blank">modelcontextprotocol.io</a></li>
                 </ul>
 
                 <ul class="actions">
@@ -146,19 +468,13 @@ EOF</code></pre>
                     <li><a href="./works.html" class="button">All Articles</a></li>
                 </ul>
             </section>
-
         </div>
     </div>
 
-    <!-- Sidebar -->
     <div id="sidebar">
         <div class="inner">
-
-            <!-- Menu -->
             <nav id="menu">
-                <header class="major">
-                    <h2>Menu</h2>
-                </header>
+                <header class="major"><h2>Menu</h2></header>
                 <ul>
                     <li><a href="./index.html">Home</a></li>
                     <li><a href="./about.html">About Me</a></li>
@@ -174,27 +490,19 @@ EOF</code></pre>
                     <li><a href="./contact.html">Contact</a></li>
                 </ul>
             </nav>
-
-            <!-- Contact -->
             <section>
-                <header class="major">
-                    <h2>Get in touch</h2>
-                </header>
+                <header class="major"><h2>Get in touch</h2></header>
                 <ul class="contact">
                     <li class="icon solid fa-envelope"><a href="mailto:vili.tajnic@gmail.com">vili.tajnic@gmail.com</a></li>
                     <li class="icon solid fa-phone">+43133777150</li>
                     <li class="icon solid fa-home">Ljubljana, Slovenia</li>
                 </ul>
             </section>
-
-            <!-- Footer -->
             <footer id="footer">
                 <p class="copyright">&copy; 2025 Vili Tajnic. Design: <a href="https://html5up.net">HTML5 UP</a>.</p>
             </footer>
-
         </div>
     </div>
-
 </div>
 <script src="./static/assets/js/jquery.min.js"></script>
 <script src="./static/assets/js/browser.min.js"></script>

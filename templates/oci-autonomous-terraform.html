@@ -8,12 +8,8 @@
 </head>
 <body class="is-preload">
 <div id="wrapper">
-
-    <!-- Main -->
     <div id="main">
         <div class="inner">
-
-            <!-- Header -->
             <header id="header">
                 <a href="./index.html" class="logo"><strong>Vili Tajnic</strong> — Oracle &amp; Python Engineer</a>
                 <ul class="icons">
@@ -22,105 +18,705 @@
                     <li><a href="https://github.com/ViliTajnic" class="icon brands fa-github" target="_blank"><span class="label">GitHub</span></a></li>
                 </ul>
             </header>
-
-            <!-- Content -->
             <section>
                 <header class="main">
                     <h1>002 — Oracle ADB + ORM Stack</h1>
                 </header>
-
                 <span class="image main"><img src="./static/assets/images/Image_w2.png" alt="" /></span>
 
-                <p>A complete Infrastructure-as-Code solution for deploying Oracle Autonomous Database on Oracle Cloud Infrastructure (OCI) using Resource Manager Stack (ORM) and Terraform. This project automates the provisioning of an enterprise-grade Oracle ADB instance, a compute instance, and all required networking — from zero to working database in under 5 minutes.</p>
-
-                <p>The stack is designed for Oracle 26ai developers who need a repeatable, version-controlled way to spin up ADB environments for development, testing, or production. It uses OCI Resource Manager so no local Terraform installation is needed.</p>
-
-                <blockquote>Full source code and documentation available on GitHub: <a href="https://github.com/ViliTajnic/OCI-Autonomous-Terraform-IaC" target="_blank">github.com/ViliTajnic/OCI-Autonomous-Terraform-IaC</a></blockquote>
-
                 <hr class="major" />
+                <h2>What's This About?</h2>
+                <p>This is a super straightforward Oracle Resource Manager (ORM) Stack that gets you up and running with Oracle Autonomous Database in minutes, not hours. Perfect for developers who want enterprise-grade database infrastructure without the complexity.</p>
+                <p><strong>Why this matters for enterprise development:</strong> Most enterprise applications need rock-solid database infrastructure, but setting it up traditionally takes weeks of planning, configuration, and testing. This ORM Stack eliminates all that friction — you get enterprise-grade Oracle database capabilities with the same effort as spinning up a simple web server.</p>
 
-                <h2>What Gets Deployed</h2>
                 <div class="row">
                     <div class="col-6 col-12-small">
-                        <h3>Oracle Autonomous Database</h3>
+                        <h3>One-Click Deploy</h3>
+                        <p>Upload a ZIP file to ORM and click deploy. That's it. No complex setup, no Terraform knowledge required. From zero to enterprise database in under 5 minutes.</p>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>Auto Database</h3>
+                        <p>Get a self-managing Oracle Autonomous Database that scales, patches, and optimizes itself automatically. Focus on building features, not managing infrastructure.</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Python Ready</h3>
+                        <p>Includes 5 Python scripts for testing connectivity, running queries, and troubleshooting connections. Plus examples for modern frameworks like FastAPI and Flask.</p>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>GitHub Repository</h3>
+                        <p>Everything you need is in the GitHub repo — from Terraform files to Python scripts and documentation. <a href="https://github.com/ViliTajnic/OCI-Autonomous-Terraform-IaC" target="_blank">ViliTajnic/OCI-Autonomous-Terraform-IaC</a></p>
+                    </div>
+                </div>
+
+                <h3>Enterprise Development Made Simple</h3>
+                <p>Building enterprise applications usually means dealing with complex infrastructure, database administration, security configurations, and scalability planning. This stack eliminates those barriers:</p>
+                <ul>
+                    <li><strong>Rapid Prototyping</strong> — Go from idea to working prototype in hours, not weeks. Perfect for hackathons, proof-of-concepts, or validating business ideas with real enterprise-grade infrastructure.</li>
+                    <li><strong>Production-Ready Scaling</strong> — Start with Always Free resources, then seamlessly scale to handle enterprise workloads. The same code that works in development works in production.</li>
+                    <li><strong>Enterprise Security</strong> — Get Oracle's enterprise security features out of the box — encryption, access controls, audit logging, and compliance features that would take months to implement manually.</li>
+                    <li><strong>Built-in Intelligence</strong> — Oracle ADB includes machine learning capabilities, automatic performance tuning, and intelligent query optimization. Your applications get smarter without extra work.</li>
+                </ul>
+
+                <hr class="major" />
+                <h2>Prerequisites &amp; Setup</h2>
+                <p>Before you can deploy this Oracle infrastructure, you'll need to set up a few things. It's all free and takes about 10 minutes.</p>
+
+                <h3>Step 1: Create Oracle Cloud Free Account</h3>
+                <p>Oracle Cloud offers one of the most generous free tiers in the industry — and it's "Always Free", not just a trial that expires.</p>
+                <ol>
+                    <li><strong>Visit Oracle Cloud</strong> — Go to <a href="https://cloud.oracle.com" target="_blank">cloud.oracle.com</a> and click "Start for free" or "Try Oracle Cloud Free Tier".</li>
+                    <li><strong>Choose Your Country</strong> — Select your country/region. This determines your home region and data residency for compliance.</li>
+                    <li><strong>Provide Basic Info</strong> — Enter your name, email, and create a password. You'll need a valid email for account verification.</li>
+                    <li><strong>Verify Your Identity</strong> — Provide a phone number for SMS verification. Oracle needs this to prevent abuse of the free tier.</li>
+                    <li><strong>Add Payment Method</strong> — You need a credit card for verification, but you won't be charged unless you upgrade to paid services. Oracle clearly separates free vs paid resources.</li>
+                    <li><strong>Confirm &amp; Activate</strong> — Review the terms, submit your application, and wait for account activation (usually instant, sometimes up to 24 hours).</li>
+                </ol>
+
+                <h3>What You Get With Always Free</h3>
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Autonomous Database</h3>
                         <ul>
-                            <li>Always Free tier — 20GB storage, 1 OCPU</li>
-                            <li>OLTP workload type, auto-scaling disabled</li>
-                            <li>Automatic backups enabled</li>
-                            <li>Self-managing: patches, tunes, and scales itself</li>
-                        </ul>
-                        <h3>Compute Instance</h3>
-                        <ul>
-                            <li>VM.Standard.E2.1.Micro (Always Free)</li>
-                            <li>Oracle Linux 8, Python 3.x pre-installed</li>
-                            <li>SSH access configured via public key</li>
+                            <li>2 Autonomous Database instances</li>
+                            <li>20GB storage each, 1 OCPU each</li>
+                            <li>All enterprise features included</li>
+                            <li>Automatic backups and security</li>
                         </ul>
                     </div>
                     <div class="col-6 col-12-small">
-                        <h3>Network Infrastructure</h3>
+                        <h3>Compute Instances</h3>
                         <ul>
-                            <li>VCN with 10.0.0.0/16 CIDR</li>
-                            <li>Public subnet (10.0.1.0/24)</li>
-                            <li>Internet Gateway and route tables</li>
-                            <li>Security groups for SSH (port 22)</li>
+                            <li>2 AMD-based VMs (1/8 OCPU, 1GB RAM each)</li>
+                            <li>OR 4 Arm-based VMs (1/6 OCPU, 1GB RAM each)</li>
+                            <li>Oracle Linux or Ubuntu</li>
+                            <li>200GB total block storage</li>
                         </ul>
-                        <h3>Stack Outputs</h3>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Additional Services</h3>
                         <ul>
-                            <li>Instance public IP address</li>
-                            <li>SSH connection command</li>
-                            <li>ADB service console URL</li>
+                            <li>Load Balancer (10 Mbps bandwidth)</li>
+                            <li>Object Storage (20GB)</li>
+                            <li>Archive Storage (10GB)</li>
+                            <li>Monitoring and notifications</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <blockquote>
+                    <strong>Pro Tips for OCI Free Account:</strong> Always Free resources have no expiration — they are yours forever. The $300 Free Trial is a separate 30-day trial for paid services; this project uses only Always Free resources. Choose a region close to you for better performance — you cannot change your home region later. Popular choices: us-ashburn-1, eu-frankfurt-1, ap-tokyo-1. Have your phone ready for SMS verification; a credit card is required but will not be charged.
+                </blockquote>
+
+                <h3>Step 2: Generate SSH Key Pair</h3>
+                <p>You'll need an SSH key pair to securely connect to your compute instance.</p>
+
+                <h3>On Windows (PowerShell or WSL)</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Open PowerShell or Windows Terminal
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/oci_key
+
+# This creates two files:
+# ~/.ssh/oci_key (private key - keep this secret!)
+# ~/.ssh/oci_key.pub (public key - this goes in ORM Stack)
+
+# Display your public key to copy later
+cat ~/.ssh/oci_key.pub</code></pre>
+
+                <h3>On macOS/Linux</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Open Terminal
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/oci_key
+
+# Display your public key
+cat ~/.ssh/oci_key.pub
+
+# Copy the entire output - you'll paste this in the ORM Stack configuration</code></pre>
+
+                <h3>Alternative: Use OCI Cloud Shell</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># In OCI Console, click the Cloud Shell icon (&gt;_) at the top
+# Cloud Shell has ssh-keygen pre-installed
+
+ssh-keygen -t rsa -b 4096 -f ~/oci_key
+cat ~/oci_key.pub
+
+# Copy the output - this is your public key for the ORM Stack</code></pre>
+
+                <h3>Step 3: Gather Required Information</h3>
+                <p>Before deploying the ORM Stack, collect these details from your OCI account:</p>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Required Item</th>
+                                <th>Where to Find It</th>
+                                <th>Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Compartment OCID</strong></td>
+                                <td>Identity &amp; Security → Compartments</td>
+                                <td>ocid1.compartment.oc1..aaaaa...</td>
+                            </tr>
+                            <tr>
+                                <td><strong>SSH Public Key</strong></td>
+                                <td>From Step 2 above</td>
+                                <td>ssh-rsa AAAAB3NzaC1yc2E...</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Admin Password</strong></td>
+                                <td>Create a strong password (8+ chars)</td>
+                                <td>Demo123! (use something secure!)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Prerequisites Checklist</h3>
+                <ul>
+                    <li>Oracle Cloud Free Account activated</li>
+                    <li>SSH key pair generated</li>
+                    <li>Compartment OCID copied</li>
+                    <li>SSH public key ready to paste</li>
+                    <li>Strong admin password chosen</li>
+                    <li>GitHub repository bookmarked</li>
+                </ul>
+
+                <hr class="major" />
+                <h2>GitHub Repository</h2>
+                <p>Everything you need is in the GitHub repo — from Terraform files to Python scripts and documentation. Visit <a href="https://github.com/ViliTajnic/OCI-Autonomous-Terraform-IaC" target="_blank">ViliTajnic/OCI-Autonomous-Terraform-IaC</a>.</p>
+                <ul>
+                    <li>4 Terraform Files</li>
+                    <li>5 Python Scripts</li>
+                    <li>1 README Guide</li>
+                    <li>$0 Monthly Cost (Always Free)</li>
+                </ul>
+
+                <h3>Repository Structure</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>OCI-Autonomous-Terraform-IaC/
+├── main.tf              # Core infrastructure
+├── variables.tf         # Input parameters
+├── outputs.tf           # Stack outputs
+├── schema.yaml          # ORM UI configuration
+├── README.md            # Setup guide
+└── scripts/
+    ├── requirements.txt # Python dependencies
+    ├── quick_test.py    # Fast connectivity check
+    ├── test_basic_connection.py
+    ├── connect_with_host.py
+    ├── sample_queries.py
+    └── troubleshoot_connection.py</code></pre>
+
+                <hr class="major" />
+                <h2>Terraform Infrastructure Scripts</h2>
+                <p>The magic happens in just 4 Terraform files that define your entire infrastructure. Here's what each one does:</p>
+
+                <h3>main.tf — Core Infrastructure</h3>
+                <p>The heart of the stack — defines your Autonomous Database, compute instance, and networking components.</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Autonomous Database - Self-managing enterprise database
+resource "oci_database_autonomous_database" "adb" {
+  compartment_id   = var.compartment_id
+  db_name         = "PYTHONADB"
+  display_name    = "Python ADB"
+
+  # Always Free tier configuration
+  is_free_tier               = true
+  cpu_core_count            = 1
+  data_storage_size_in_tbs  = 1
+
+  # Enterprise features enabled by default
+  admin_password           = var.admin_password
+  db_workload             = "OLTP"
+  is_auto_scaling_enabled = false
+}
+
+# Compute instance - Your development environment
+resource "oci_core_instance" "compute_instance" {
+  compartment_id      = var.compartment_id
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  shape              = "VM.Standard.E2.1.Micro"
+
+  # Oracle Linux with Python pre-installed
+  source_details {
+    source_type = "image"
+    source_id   = var.instance_image_id
+  }
+
+  # SSH access configuration
+  metadata = {
+    ssh_authorized_keys = var.ssh_public_key
+  }
+}</code></pre>
+
+                <h3>variables.tf — Configuration Options</h3>
+                <p>All the customizable parameters for your infrastructure — passwords, keys, and resource sizes.</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Required variables
+variable "admin_password" {
+  description = "Password for ADB admin user"
+  type        = string
+  sensitive   = true
+}
+
+variable "ssh_public_key" {
+  description = "SSH public key for instance access"
+  type        = string
+}
+
+variable "compartment_id" {
+  description = "OCID of the compartment"
+  type        = string
+}
+
+# Optional customizations
+variable "instance_shape" {
+  description = "Shape of the compute instance"
+  type        = string
+  default     = "VM.Standard.E2.1.Micro"
+}
+
+variable "db_cpu_cores" {
+  description = "Number of CPU cores for ADB"
+  type        = number
+  default     = 1
+}</code></pre>
+
+                <h3>outputs.tf — What You Get</h3>
+                <p>Useful information about your deployed infrastructure — IP addresses, connection details, and next steps.</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Instance connection details
+output "instance_public_ip" {
+  description = "Public IP of the compute instance"
+  value       = oci_core_instance.compute_instance.public_ip
+}
+
+output "ssh_command" {
+  description = "SSH command to connect to instance"
+  value       = "ssh opc@${oci_core_instance.compute_instance.public_ip}"
+}
+
+# Database information
+output "adb_display_name" {
+  description = "Display name of the Autonomous Database"
+  value       = oci_database_autonomous_database.adb.display_name
+}
+
+output "adb_service_console_url" {
+  description = "Service console URL for the ADB"
+  value       = oci_database_autonomous_database.adb.service_console_url
+}</code></pre>
+
+                <h3>schema.yaml — UI Configuration</h3>
+                <p>Makes the ORM interface user-friendly with descriptions, validation, and helpful prompts.</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>title: "Oracle Autonomous Database + Python Stack"
+description: "Deploy ADB with Python development environment"
+informationalText: "Creates enterprise-grade database infrastructure in minutes"
+
+variableGroups:
+  - title: "Database Configuration"
+    variables:
+      - admin_password
+      - db_cpu_cores
+  - title: "Compute Configuration"
+    variables:
+      - ssh_public_key
+      - instance_shape
+
+variables:
+  admin_password:
+    title: "Database Admin Password"
+    description: "Password for the ADMIN user (8+ characters)"
+    type: password
+    required: true
+    pattern: "^.{8,}$"</code></pre>
+
+                <h3>Modern Python Connection Patterns</h3>
+                <p>For production enterprise applications, here are the connection patterns used in the scripts:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Enterprise Connection Pool Pattern
+import oracledb
+from contextlib import contextmanager
+
+class EnterpriseDBManager:
+    """Production-ready database connection manager."""
+
+    def __init__(self, config):
+        self.config = config
+        self.pool = None
+
+    def initialize_pool(self):
+        """Create connection pool for high-performance apps."""
+        self.pool = oracledb.create_pool(
+            user=self.config['user'],
+            password=self.config['password'],
+            dsn=self.config['dsn'],
+            config_dir=self.config['wallet_location'],
+            wallet_location=self.config['wallet_location'],
+            wallet_password=self.config['wallet_password'],
+            min=2,          # Minimum connections
+            max=20,         # Maximum connections
+            increment=1,    # Connection increment
+            threaded=True   # Thread-safe
+        )
+
+    @contextmanager
+    def get_connection(self):
+        """Context manager for safe connection handling."""
+        connection = self.pool.acquire()
+        try:
+            yield connection
+        finally:
+            self.pool.release(connection)</code></pre>
+
+                <hr class="major" />
+                <h2>Python Scripts Reference</h2>
+                <p>The repository includes 5 specialized Python scripts for different aspects of working with your Autonomous Database.</p>
+
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>quick_test.py</h3>
+                        <p><strong>Purpose:</strong> Lightning-fast connectivity verification</p>
+                        <ul>
+                            <li>Minimal output — just success or failure</li>
+                            <li>Perfect for automation and CI/CD pipelines</li>
+                            <li>Returns proper exit codes (0=success, 1=fail)</li>
+                            <li>Great for health checks and monitoring</li>
+                        </ul>
+                        <p><strong>When to use:</strong> First test after deployment, automated testing, quick verification</p>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>test_basic_connection.py</h3>
+                        <p><strong>Purpose:</strong> Comprehensive connection testing with detailed info</p>
+                        <ul>
+                            <li>Tests all service levels (high/medium/low performance)</li>
+                            <li>Shows database version and configuration</li>
+                            <li>Displays user and database connection details</li>
+                            <li>Detailed success/failure messages with context</li>
+                        </ul>
+                        <p><strong>When to use:</strong> Initial setup validation, understanding your database config, debugging</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>connect_with_host.py</h3>
+                        <p><strong>Purpose:</strong> Deep dive into connection details and host information</p>
+                        <ul>
+                            <li>Reads and displays TNS configuration</li>
+                            <li>Shows server host and instance information</li>
+                            <li>Session details and client information</li>
+                            <li>Network and service configuration data</li>
+                        </ul>
+                        <p><strong>When to use:</strong> Troubleshooting network issues, understanding infrastructure</p>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>sample_queries.py</h3>
+                        <p><strong>Purpose:</strong> Demonstrate real database operations and enterprise patterns</p>
+                        <ul>
+                            <li>Creates realistic business tables (employees, analytics)</li>
+                            <li>Inserts sample data with proper data types</li>
+                            <li>Shows complex queries and aggregations</li>
+                            <li>Demonstrates transaction management</li>
+                        </ul>
+                        <p><strong>When to use:</strong> Learning SQL operations, testing performance, building prototypes</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>troubleshoot_connection.py</h3>
+                        <p><strong>Purpose:</strong> Comprehensive diagnostic tool for connection issues</p>
+                        <ul>
+                            <li>Validates wallet files and permissions</li>
+                            <li>Checks Python environment and dependencies</li>
+                            <li>Tests network connectivity to Oracle services</li>
+                            <li>Provides specific solutions for common problems</li>
+                        </ul>
+                        <p><strong>When to use:</strong> When connections fail, environment validation, setup debugging</p>
+                    </div>
+                </div>
+
+                <h3>Script Usage Examples &amp; Commands</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Navigate to scripts directory
+cd OCI-Autonomous-Terraform-IaC/scripts/
+
+# Install dependencies (one-time setup)
+pip3 install --user -r requirements.txt
+
+# 1. Quick connectivity test (recommended first step)
+python3 quick_test.py
+# Expected output: Connection successful at 2025-01-08 14:30:25
+
+# 2. Comprehensive connection testing
+python3 test_basic_connection.py
+# Shows detailed info about all service levels
+
+# 3. Get connection and infrastructure details
+python3 connect_with_host.py
+# Displays TNS config and server information
+
+# 4. Run sample database operations
+python3 sample_queries.py
+# Creates tables, inserts data, runs enterprise queries
+
+# 5. Debug any connection issues
+python3 troubleshoot_connection.py
+# Comprehensive diagnostic with specific solutions</code></pre>
+
+                <h3>quick_test.py — The Essential Health Check</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>#!/usr/bin/env python3
+"""
+Quick Oracle ADB Connection Test
+Simple, fast connectivity verification for automation
+"""
+import oracledb
+import getpass
+import sys
+
+def quick_test():
+    """Perform a quick connection test with minimal output."""
+    try:
+        # Get credentials securely
+        admin_password = getpass.getpass("Enter ADMIN password: ")
+        wallet_password = getpass.getpass("Enter wallet password: ")
+
+        # Quick connection test using high-performance service
+        conn = oracledb.connect(
+            user="ADMIN",
+            password=admin_password,
+            dsn="pythonadb_high",
+            config_dir="/home/opc/wallet",
+            wallet_location="/home/opc/wallet",
+            wallet_password=wallet_password
+        )
+
+        # Simple test query
+        cursor = conn.cursor()
+        cursor.execute("SELECT 'Connection successful at ' || TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') FROM dual")
+        result = cursor.fetchone()[0]
+
+        cursor.close()
+        conn.close()
+
+        print(result)
+        return True
+
+    except oracledb.DatabaseError as e:
+        error_obj = e.args[0] if e.args else None
+        error_code = error_obj.code if hasattr(error_obj, 'code') else 'Unknown'
+        print(f"Connection failed (Error {error_code}): {e}")
+        return False
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return False
+
+if __name__ == "__main__":
+    success = quick_test()
+    sys.exit(0 if success else 1)  # Return proper exit codes</code></pre>
+
+                <h3>Recommended Script Workflow</h3>
+                <ol>
+                    <li><strong>Quick Health Check</strong> — Start with <code>python3 quick_test.py</code> to verify basic connectivity. This should be your first test after any setup.</li>
+                    <li><strong>Comprehensive Testing</strong> — Run <code>python3 test_basic_connection.py</code> to test all service levels and get detailed database information.</li>
+                    <li><strong>Explore Database Operations</strong> — Execute <code>python3 sample_queries.py</code> to see real enterprise database operations and learn SQL patterns.</li>
+                    <li><strong>Troubleshoot If Needed</strong> — If you encounter issues, run <code>python3 troubleshoot_connection.py</code> for comprehensive diagnostics.</li>
+                    <li><strong>Build Your Application</strong> — Use the connection patterns and SQL examples from the scripts to build your own enterprise applications.</li>
+                </ol>
+
+                <h3>Script Dependencies</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># requirements.txt - All dependencies for the scripts
+oracledb>=1.4.0
+pandas>=1.5.0
+sqlalchemy>=2.0.0
+requests>=2.28.0
+
+# Installation command
+pip3 install --user -r requirements.txt</code></pre>
+
+                <p>All scripts use the modern <code>python-oracledb</code> driver which doesn't require Oracle Instant Client installation. Just install via pip and you're ready to go.</p>
+
+                <hr class="major" />
+                <h2>Configuration Options</h2>
+                <p>The ORM Stack is designed to be flexible. Here are the main configuration options you can customize:</p>
+
+                <h3>Required Variables</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Variable</th>
+                                <th>Description</th>
+                                <th>Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>admin_password</code></td>
+                                <td>Database ADMIN password (8+ chars)</td>
+                                <td>Demo123!</td>
+                            </tr>
+                            <tr>
+                                <td><code>ssh_public_key</code></td>
+                                <td>Your SSH public key for instance access</td>
+                                <td>ssh-rsa AAAAB3...</td>
+                            </tr>
+                            <tr>
+                                <td><code>compartment_id</code></td>
+                                <td>OCI compartment OCID</td>
+                                <td>ocid1.compartment.oc1...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Optional Customizations</h3>
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <p><strong>Compute Shape</strong><br />Default: VM.Standard.E2.1.Micro (Always Free)<br />Can change to: VM.Standard.E4.Flex for more power</p>
+                        <p><strong>Database Size</strong><br />Default: 20GB, 1 OCPU (Always Free)<br />Can scale: Up to multiple TB and OCPUs</p>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <p><strong>Network CIDR</strong><br />Default: 10.0.0.0/16<br />Can customize: Any valid CIDR block</p>
+                    </div>
+                </div>
+
+                <h3>Environment-Specific Config</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Development Environment
+variable "environment" {
+  default = "development"
+}
+
+variable "db_cpu_cores" {
+  default = 1  # Always Free
+}
+
+variable "db_storage_tbs" {
+  default = 1  # 20GB Always Free
+}
+
+# Production Environment (paid tier)
+variable "db_cpu_cores" {
+  default = 4  # More performance
+}
+
+variable "db_storage_tbs" {
+  default = 10  # 10TB storage
+}</code></pre>
+
+                <hr class="major" />
+                <h2>Usage Manual</h2>
+                <p>Here's how to get everything up and running, step by step.</p>
+
+                <ol>
+                    <li><strong>Download &amp; Prepare</strong> — Clone or download the repository, then create a ZIP file with the Terraform files (main.tf, variables.tf, outputs.tf, schema.yaml).</li>
+                    <li><strong>Upload to ORM</strong> — Go to OCI Console → Developer Services → Resource Manager → Create Stack → Upload your ZIP file.</li>
+                    <li><strong>Configure Variables</strong> — Set your database admin password and paste your SSH public key. ORM will show a nice UI for this.</li>
+                    <li><strong>Plan &amp; Deploy</strong> — Click "Plan" to see what will be created, then "Apply" to deploy. Takes about 3–5 minutes.</li>
+                    <li><strong>Download Wallet</strong> — Go to your new Autonomous Database, click "DB Connection", download the wallet ZIP with a password.</li>
+                    <li><strong>Test Connection</strong> — SSH to your instance, upload the wallet, and run the Python scripts to test everything works.</li>
+                </ol>
+
+                <h3>Quick Commands</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># SSH to your instance (get IP from ORM outputs)
+ssh opc@&lt;instance_ip&gt;
+
+# Upload wallet
+scp wallet.zip opc@&lt;instance_ip&gt;:~/
+
+# Extract and test
+mkdir ~/wallet
+unzip wallet.zip -d ~/wallet/
+
+# Install Python dependencies
+cd OCI-Autonomous-Terraform-IaC/scripts/
+pip3 install --user -r requirements.txt
+
+# Quick connectivity test
+python3 quick_test.py</code></pre>
+
+                <h3>Common Tasks</h3>
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Check Connection</h3>
+                        <ul>
+                            <li>Run <code>python3 quick_test.py</code></li>
+                            <li>Should see "Connection successful"</li>
+                            <li>If not, run troubleshoot script</li>
+                        </ul>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>Run Sample Queries</h3>
+                        <ul>
+                            <li>Use <code>python3 sample_queries.py</code></li>
+                            <li>Creates tables and inserts data</li>
+                            <li>Shows various SQL operations</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Debug Issues</h3>
+                        <ul>
+                            <li>Run <code>python3 troubleshoot_connection.py</code></li>
+                            <li>Checks wallet files and permissions</li>
+                            <li>Provides specific error guidance</li>
                         </ul>
                     </div>
                 </div>
 
                 <hr class="major" />
+                <h2>Deployment Details</h2>
+                <p>What actually gets deployed when you run this ORM Stack:</p>
 
-                <h2>Terraform Structure</h2>
-                <p>The entire infrastructure is defined in 4 Terraform files:</p>
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Autonomous Database</h3>
+                        <ul>
+                            <li>Name: PYTHONADB</li>
+                            <li>20GB storage, 1 OCPU (Always Free)</li>
+                            <li>OLTP workload type</li>
+                            <li>Auto-scaling disabled (free tier)</li>
+                            <li>Automatic backups enabled</li>
+                        </ul>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>Compute Instance</h3>
+                        <ul>
+                            <li>VM.Standard.E2.1.Micro (Always Free)</li>
+                            <li>Oracle Linux 8</li>
+                            <li>Python 3.x pre-installed</li>
+                            <li>SSH access configured</li>
+                            <li>Public IP assigned</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Network Infrastructure</h3>
+                        <ul>
+                            <li>VCN with 10.0.0.0/16 CIDR</li>
+                            <li>Public subnet (10.0.1.0/24)</li>
+                            <li>Internet Gateway</li>
+                            <li>Security groups for SSH (port 22)</li>
+                            <li>Route tables configured</li>
+                        </ul>
+                    </div>
+                </div>
 
-<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.82rem;line-height:1.6;margin:1rem 0;"><code>OCI-Autonomous-Terraform-IaC/
-├── main.tf          # Core infrastructure (ADB, compute, networking)
-├── variables.tf     # Input parameters (password, SSH key, compartment)
-├── outputs.tf       # Stack outputs (IP, SSH command, console URL)
-├── schema.yaml      # ORM UI configuration
-└── scripts/
-    ├── requirements.txt
-    ├── quick_test.py
-    ├── test_basic_connection.py
-    ├── sample_queries.py
-    └── troubleshoot_connection.py</code></pre>
+                <h3>Stack Outputs</h3>
+                <p>After deployment, the ORM Stack provides these useful outputs:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>Outputs:
 
-                <h2>Deployment Steps</h2>
-                <ol>
-                    <li>Clone or download the repository and create a ZIP of the Terraform files</li>
-                    <li>Go to OCI Console → Developer Services → Resource Manager → Create Stack</li>
-                    <li>Upload the ZIP file, fill in variables (password, SSH key, compartment OCID)</li>
-                    <li>Click Plan, review, then Apply — infrastructure is ready in minutes</li>
-                    <li>Download the ADB wallet from OCI Console, upload to compute instance</li>
-                    <li>Run <code>python3 quick_test.py</code> to verify connectivity</li>
-                </ol>
+instance_public_ip = "XXX.XXX.XXX.XXX"
+ssh_command = "ssh opc@XXX.XXX.XXX.XXX"
+adb_display_name = "Python ADB"
+adb_service_console_url = "https://cloud.oracle.com/..."
 
-                <hr class="major" />
-
-                <h2>Python Connection Scripts</h2>
-                <p>Five ready-to-use Python scripts are included for testing and exploring the ADB connection:</p>
-
-<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.82rem;line-height:1.6;margin:1rem 0;"><code>import oracledb
-
-conn = oracledb.connect(
-    user="ADMIN",
-    password=admin_password,
-    dsn="pythonadb_high",
-    config_dir="/home/opc/wallet",
-    wallet_location="/home/opc/wallet",
-    wallet_password=wallet_password
-)
-
-cursor = conn.cursor()
-cursor.execute("SELECT 'Connected at ' || TO_CHAR(SYSDATE, 'HH24:MI:SS') FROM dual")
-print(cursor.fetchone()[0])</code></pre>
-
-                <blockquote>All scripts use the modern <code>python-oracledb</code> driver — no Oracle Instant Client installation required. Install with <code>pip3 install -r requirements.txt</code> and you are ready to go.</blockquote>
+Next Steps:
+1. Download ADB wallet from console
+2. SSH to instance using: ssh opc@XXX.XXX.XXX.XXX
+3. Upload wallet and test connectivity</code></pre>
 
                 <ul class="actions">
                     <li><a href="./work.html" class="button">&larr; Previous Article</a></li>
@@ -128,19 +724,13 @@ print(cursor.fetchone()[0])</code></pre>
                     <li><a href="./works.html" class="button">All Articles</a></li>
                 </ul>
             </section>
-
         </div>
     </div>
 
-    <!-- Sidebar -->
     <div id="sidebar">
         <div class="inner">
-
-            <!-- Menu -->
             <nav id="menu">
-                <header class="major">
-                    <h2>Menu</h2>
-                </header>
+                <header class="major"><h2>Menu</h2></header>
                 <ul>
                     <li><a href="./index.html">Home</a></li>
                     <li><a href="./about.html">About Me</a></li>
@@ -156,27 +746,19 @@ print(cursor.fetchone()[0])</code></pre>
                     <li><a href="./contact.html">Contact</a></li>
                 </ul>
             </nav>
-
-            <!-- Contact -->
             <section>
-                <header class="major">
-                    <h2>Get in touch</h2>
-                </header>
+                <header class="major"><h2>Get in touch</h2></header>
                 <ul class="contact">
                     <li class="icon solid fa-envelope"><a href="mailto:vili.tajnic@gmail.com">vili.tajnic@gmail.com</a></li>
                     <li class="icon solid fa-phone">+43133777150</li>
                     <li class="icon solid fa-home">Ljubljana, Slovenia</li>
                 </ul>
             </section>
-
-            <!-- Footer -->
             <footer id="footer">
                 <p class="copyright">&copy; 2025 Vili Tajnic. Design: <a href="https://html5up.net">HTML5 UP</a>.</p>
             </footer>
-
         </div>
     </div>
-
 </div>
 <script src="./static/assets/js/jquery.min.js"></script>
 <script src="./static/assets/js/browser.min.js"></script>
