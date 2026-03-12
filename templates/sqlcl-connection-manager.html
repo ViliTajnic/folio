@@ -35,22 +35,53 @@
 
                 <hr class="major" />
                 <h2>2. How Connection Manager Works Under the Hood</h2>
-                <p>Connection Manager stores named connections in a JSON file located in the SQLcl user configuration directory. On Linux and macOS this is typically <code>~/.sqlcl/connections.json</code>. On Windows it sits under <code>%APPDATA%\sqlcl\</code>. The file is not encrypted but passwords — when saved with <code>-savepwd</code> — are obfuscated using a local keystore mechanism tied to your OS user account.</p>
+                <p>Recent versions of Oracle SQLcl store saved connections using the <strong>Oracle DBTools connection store</strong> — a shared store used across multiple Oracle database tools including SQLcl, SQL Developer, and Oracle database extensions for IDEs. SQLcl no longer relies solely on <code>~/.sqlcl</code> for connection storage.</p>
 
                 <h3>Connection storage location</h3>
-<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Linux / macOS
-~/.sqlcl/connections.json
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Linux / macOS — DBTools connection store
+~/.dbtools/connections/
 
-# Windows
-%APPDATA%\sqlcl\connections.json
+# Each connection is stored in its own directory with a unique identifier:
+~/.dbtools/connections/
+├── &lt;uuid-1&gt;/
+│   ├── dbtools.properties   # connection metadata (name, host, port, service)
+│   ├── credentials.sso      # encrypted credentials (Oracle secure storage)
+│   └── ojdbc.properties     # JDBC-specific connection settings
+├── &lt;uuid-2&gt;/
+└── &lt;uuid-3&gt;/</code></pre>
 
-# View raw JSON (useful for debugging or backup/restore)
-cat ~/.sqlcl/connections.json | python3 -m json.tool</code></pre>
+                <h3>What each file contains</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>File</th><th>Contents</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>dbtools.properties</code></td><td>Connection name, host, port, service name, username</td></tr>
+                            <tr><td><code>credentials.sso</code></td><td>Encrypted password using Oracle's secure storage format</td></tr>
+                            <tr><td><code>ojdbc.properties</code></td><td>JDBC-specific connection settings</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <p>Each entry in the JSON contains the connection name, connection string, and a flag indicating whether a password is stored. The actual credential is held in a local Java KeyStore (JKS) file alongside the JSON. This design means that <code>connections.json</code> can be safely committed to a dotfiles repository without exposing passwords — but the keystore cannot be shared across machines.</p>
+                <p>A typical <code>dbtools.properties</code> entry looks like:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>name=dev26ai
+type=ORACLE_BASIC
+userName=system
+host=localhost
+port=1521
+serviceName=freepdb1</code></pre>
+
+                <p>The same DBTools connection store is shared by:</p>
+                <ul>
+                    <li>SQLcl</li>
+                    <li>SQL Developer</li>
+                    <li>Oracle database extensions for VS Code and other IDEs</li>
+                </ul>
+                <p>This means a connection saved in SQL Developer is immediately available in SQLcl — and vice versa — without any manual export or import.</p>
 
                 <blockquote>
-                    <strong>Tip: Backing up connections across machines</strong> — Export connection strings (without passwords) from <code>connections.json</code> into a version-controlled dotfile. On a new machine, re-import and re-save passwords with <code>-savepwd</code>. This gives you portable, reproducible connection setup without credential exposure.
+                    <strong>Tip: Backing up connections across machines</strong> — Use <code>cm export</code> to export connection names and strings (without passwords) to a JSON file you can version-control. On a new machine, <code>cm import</code> that file and re-save passwords with <code>-savepwd</code>. The <code>credentials.sso</code> files are machine-tied and cannot be copied directly between machines.
                 </blockquote>
 
                 <hr class="major" />
