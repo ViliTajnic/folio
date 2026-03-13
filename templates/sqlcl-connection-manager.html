@@ -31,7 +31,7 @@
                 <p>SQLcl's Connection Manager (CM) solves this completely. It acts as a named connection registry that persists across SQLcl sessions, integrates directly with the <code>-name</code> flag at startup, and — critically for 26ai automation — satisfies the <code>-savepwd</code> requirement needed by the SQLcl MCP server to enable passwordless, automated database access from Claude Desktop and other AI tools.</p>
 
                 <blockquote>
-                    <strong>Key insight for 26ai AI tooling:</strong> The SQLcl MCP server (<code>oracle.sqldeveloper.mcp</code>) requires a saved connection with stored password (<code>-savepwd</code>) to operate without interactive prompts. This means properly configured Connection Manager entries are a prerequisite for any Oracle 26ai AI Optimizer, RAG pipeline, or MCP-based automation workflow.
+                    <strong>Key insight for automation and scripting:</strong> Any headless or non-interactive Oracle workflow — CI/CD pipelines, shell scripts, or scheduled jobs — requires a saved connection with a stored password (<code>-savepwd</code>) to run without manual input. Properly configured Connection Manager entries are therefore a prerequisite for reliable Oracle 26ai automation.
                 </blockquote>
 
                 <hr class="major" />
@@ -482,7 +482,6 @@ cm import file.json</code></pre>
                     <li>Jolliffe, C. (2025). <em>CM Basics — SQLcl Connection Manager.</em> <a href="https://blog.jolliffe.hk/2025/04/23/cm-basics.html" target="_blank">blog.jolliffe.hk</a></li>
                     <li>Oracle Corporation. <em>SQLcl Documentation and Downloads.</em> <a href="https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/" target="_blank">oracle.com/sqlcl</a></li>
                     <li>Oracle Database 26ai — VECTOR Datatype and HNSW Index Documentation. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/" target="_blank">docs.oracle.com</a></li>
-                    <li>Oracle AI Optimizer and Server — Developer Guide. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/aimla/" target="_blank">docs.oracle.com/aimla</a></li>
                     <li>Model Context Protocol (MCP) Specification — Anthropic. <a href="https://modelcontextprotocol.io/" target="_blank">modelcontextprotocol.io</a></li>
                 </ul>
 
