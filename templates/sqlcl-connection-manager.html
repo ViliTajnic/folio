@@ -73,13 +73,12 @@ host=localhost
 port=1521
 serviceName=freepdb1</code></pre>
 
-                <p>The same DBTools connection store is shared by:</p>
+                <p>The DBTools connection store is used by:</p>
                 <ul>
                     <li>SQLcl</li>
-                    <li>SQL Developer</li>
-                    <li>Oracle database extensions for VS Code and other IDEs</li>
+                    <li>Oracle Database extension for VS Code</li>
                 </ul>
-                <p>Modern Oracle database tools may share a DBTools-based connection store depending on tool versions and configuration. Cross-tool availability is not universally guaranteed and depends on version compatibility.</p>
+                <p>Note: SQL Developer maintains its own separate connection store and does not share the DBTools store with SQLcl.</p>
 
                 <blockquote>
                     <strong>Tip: Backing up connections across machines</strong> — The <code>credentials.sso</code> files are machine-tied and cannot be copied directly between machines. Use <code>cm import</code> with a previously prepared connections file and re-save passwords individually with <code>-savepwd</code> on each new machine.
