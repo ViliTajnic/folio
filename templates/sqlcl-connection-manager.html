@@ -26,12 +26,12 @@
                 <span class="image main"><img src="./static/assets/images/Image_w3.jpg" alt="" /></span>
 
                 <hr class="major" />
-                <h2>1. Why Connection Manager Matters in Oracle 26ai Workflows</h2>
-                <p>If you are a developer or DBA working with Oracle Database 26ai, your day likely spans multiple environments: a local containerised 26ai instance running on Docker or Colima, a cloud-hosted Pluggable Database (PDB) on OCI, an Autonomous Database (ADB) accessed via wallet, and possibly a dedicated vector store for AI pipelines. Manually typing JDBC connection strings, TNS aliases, and wallet paths every single session is not only tedious — it introduces connection errors that are hard to debug under pressure.</p>
-                <p>SQLcl's Connection Manager (CM) solves this completely. It acts as a named connection registry that persists across SQLcl sessions, integrates directly with the <code>-name</code> flag at startup, and — critically for 26ai automation — satisfies the <code>-savepwd</code> requirement needed by the SQLcl MCP server to enable passwordless, automated database access from Claude Desktop and other AI tools.</p>
+                <h2>1. Why Connection Manager Matters</h2>
+                <p>If you work with SQLcl across multiple environments — a local PDB on Docker, a cloud-hosted database on OCI, an Autonomous Database accessed via wallet, or a CI/CD pipeline — manually typing connection strings, TNS aliases, and wallet paths every session is tedious and error-prone. Connection Manager eliminates that entirely.</p>
+                <p>SQLcl's Connection Manager (CM) is a named connection registry that persists across sessions and integrates directly with the <code>-name</code> flag at startup. It is a core SQLcl feature available across Oracle Database versions, and becomes particularly valuable in Oracle 26ai workflows where stored credentials (<code>-savepwd</code>) are required for automated and non-interactive use.</p>
 
                 <blockquote>
-                    <strong>Key insight for automation and scripting:</strong> Any headless or non-interactive Oracle workflow — CI/CD pipelines, shell scripts, or scheduled jobs — requires a saved connection with a stored password (<code>-savepwd</code>) to run without manual input. Properly configured Connection Manager entries are therefore a prerequisite for reliable Oracle 26ai automation.
+                    <strong>Key insight for automation and scripting:</strong> Any headless or non-interactive SQLcl workflow — CI/CD pipelines, shell scripts, or scheduled jobs — requires a saved connection with a stored password (<code>-savepwd</code>) to run without manual input. Properly configured Connection Manager entries are therefore a prerequisite for reliable database automation.
                 </blockquote>
 
                 <hr class="major" />
@@ -86,8 +86,8 @@ serviceName=freepdb1</code></pre>
                 </blockquote>
 
                 <hr class="major" />
-                <h2>3. Core Commands — Complete Reference</h2>
-                <p>The following table covers every Connection Manager command you need as a 26ai developer or DBA.</p>
+                <h2>3. Core Commands Reference</h2>
+                <p>The following table covers the core Connection Manager commands. Subcommand availability can vary by SQLcl version — check <code>connmgr help</code> in your installed version for the full list.</p>
 
                 <div class="table-wrapper">
                     <table>
@@ -131,7 +131,7 @@ serviceName=freepdb1</code></pre>
                             </tr>
                             <tr>
                                 <td><code>cm delete -conn &lt;name&gt;</code></td>
-                                <td>Remove a named connection</td>
+                                <td>Remove a named connection (supported in current SQLcl builds)</td>
                                 <td><code>cm delete -conn oke_prod</code></td>
                             </tr>
                             <tr>
