@@ -78,10 +78,10 @@ serviceName=freepdb1</code></pre>
                     <li>SQL Developer</li>
                     <li>Oracle database extensions for VS Code and other IDEs</li>
                 </ul>
-                <p>This means a connection saved in SQL Developer is immediately available in SQLcl — and vice versa — without any manual export or import.</p>
+                <p>Modern Oracle database tools may share a DBTools-based connection store depending on tool versions and configuration. Cross-tool availability is not universally guaranteed and depends on version compatibility.</p>
 
                 <blockquote>
-                    <strong>Tip: Backing up connections across machines</strong> — Use <code>cm export</code> to export connection names and strings (without passwords) to a JSON file you can version-control. On a new machine, <code>cm import</code> that file and re-save passwords with <code>-savepwd</code>. The <code>credentials.sso</code> files are machine-tied and cannot be copied directly between machines.
+                    <strong>Tip: Backing up connections across machines</strong> — The <code>credentials.sso</code> files are machine-tied and cannot be copied directly between machines. Use <code>cm import</code> with a previously prepared connections file and re-save passwords individually with <code>-savepwd</code> on each new machine.
                 </blockquote>
 
                 <hr class="major" />
@@ -132,11 +132,6 @@ serviceName=freepdb1</code></pre>
                                 <td><code>cm delete -conn &lt;name&gt;</code></td>
                                 <td>Remove a named connection</td>
                                 <td><code>cm delete -conn oke_prod</code></td>
-                            </tr>
-                            <tr>
-                                <td><code>cm export &gt; &lt;file&gt;</code></td>
-                                <td>Export connection names/strings (no passwords) to JSON</td>
-                                <td><code>cm export &gt; ~/dotfiles/oracle_connections.json</code></td>
                             </tr>
                             <tr>
                                 <td><code>cm import &lt;file&gt;</code></td>
@@ -234,7 +229,7 @@ EOF
 done</code></pre>
 
                 <h3>5.3 Updating Credentials</h3>
-                <p>The <code>-replace</code> flag updates an existing entry without needing to delete and recreate it:</p>
+                <p>The <code>-replace</code> flag updates an existing entry without needing to delete and recreate it. Note: <code>-replace</code> is documented but may behave inconsistently in some SQLcl versions — verify the behavior in your installed version:</p>
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Update password after rotation
 conn -save dev26ai -replace -savepwd system/&lt;your_new_password&gt;@localhost:1521/freepdb1
 
@@ -251,7 +246,7 @@ cm list</code></pre>
                 <hr class="major" />
                 <h2>6. Connection Manager and the SQLcl MCP Server</h2>
                 <p>This is where Connection Manager becomes not just convenient but architecturally essential for Oracle 26ai AI workflows. The SQLcl MCP server — part of the <code>oracle.sqldeveloper.mcp</code> extension — exposes Oracle database tools (query execution, object listing, DDL generation) to AI assistants like Claude Desktop via the Model Context Protocol.</p>
-                <p>The MCP server launches SQLcl as a subprocess using stdio transport. Because there is no interactive terminal, it cannot prompt for passwords. The <code>-name</code> flag combined with a <code>-savepwd</code> connection is the only supported authentication path.</p>
+                <p>The MCP server launches SQLcl as a subprocess using stdio transport. Because there is no interactive terminal, it cannot prompt for passwords. For SQLcl MCP usage, a saved connection with stored credentials (<code>-savepwd</code>) is the recommended configuration. SQLcl itself still supports standard connection methods outside of MCP.</p>
 
                 <h3>Claude Desktop MCP configuration</h3>
                 <p>A typical <code>claude_desktop_config.json</code> entry for the SQLcl MCP server targeting an Oracle 26ai instance:</p>
@@ -372,15 +367,12 @@ EOF
 
 echo "All connections configured successfully."</code></pre>
 
-                <h3>8.2 Exporting and importing connections</h3>
-                <p>For team onboarding, export connection names (structure only, no passwords) and share via a repository:</p>
-<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Export (run inside SQLcl)
-cm export > ~/dotfiles/oracle_connections.json
-
--- Import on a new machine
+                <h3>8.2 Importing connections on a new machine</h3>
+                <p>For team onboarding, prepare a connections JSON file (connection names and strings only, no passwords) and share it via a repository. Use <code>cm import</code> to load it on a new machine, then add passwords individually:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Import a shared connections file on a new machine
 cm import ~/dotfiles/oracle_connections.json
 
--- Then add passwords individually
+-- Then add passwords individually for each connection
 conn -save dev26ai -replace -savepwd system/&lt;your_password&gt;@localhost:1521/freepdb1
 conn -save adb_dev  -replace -savepwd admin/&lt;your_password&gt;@myatp_high</code></pre>
 
@@ -447,8 +439,8 @@ cm delete -conn adb_dev
 conn -save adb_dev -savepwd admin/&lt;your_password&gt;@myatp_high</code></pre>
 
                 <h3>9.3 Multiple SQLcl versions side-by-side</h3>
-                <p>Oracle 26ai development sometimes requires testing against both SQLcl 24.x and SQLcl 25.x. Each version uses the same <code>~/.sqlcl</code> directory, but you can isolate per version with <code>SQLCL_HOME</code>:</p>
-<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Isolate connection store for a specific SQLcl version
+                <p>Oracle 26ai development sometimes requires testing against both SQLcl 24.x and SQLcl 25.x. Each version uses the shared DBTools connection store at <code>~/.dbtools/connections/</code>. Setting <code>SQLCL_HOME</code> to isolate connection storage per version has been suggested in community discussions but is not confirmed by official SQLcl documentation — treat it as experimental:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Experimental — behavior not confirmed by official documentation
 export SQLCL_HOME=/home/oracle/.sqlcl_v25
 /opt/sqlcl_v25/bin/sql -name dev26ai</code></pre>
 
@@ -474,7 +466,6 @@ cm test &lt;name&gt;</code></pre>
                     <div class="col-6 col-12-small">
                         <h3>Manage</h3>
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>cm delete -conn &lt;name&gt;
-cm export &gt; file.json
 cm import file.json</code></pre>
                     </div>
                 </div>
