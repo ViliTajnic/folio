@@ -7,7 +7,6 @@ from datetime import datetime
 app = Flask(__name__)
 
 COUNTER_FILE = 'visit_counts.json'
-TRACKED_PAGES = ['work.html', 'oci-autonomous-terraform.html', 'sqlcl-connection-manager.html']
 
 def increment_visit(page_name):
     counts = {}
@@ -22,14 +21,16 @@ def increment_visit(page_name):
 # Root route → serves index.html
 @app.route('/')
 def home():
-    return render_template('index.html')
+    rendered = render_template('index.html')
+    increment_visit('index.html')
+    return rendered
 
 # Dynamic route → serves any HTML page from /templates
 @app.route('/<string:page_name>')
 def render_static_page(page_name):
-    if page_name in TRACKED_PAGES:
-        increment_visit(page_name)
-    return render_template(page_name)
+    rendered = render_template(page_name)
+    increment_visit(page_name)
+    return rendered
 
 # Write form data to a CSV file
 def write_to_csv(data):
