@@ -1,0 +1,273 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>004 — Oracle 26ai on Docker — Vili Tajnic</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="./static/assets/css/main.css" />
+    <link rel="icon" type="image/x-icon" href="./static/favicon.ico" />
+</head>
+<body class="is-preload">
+<div id="wrapper">
+    <div id="main">
+        <div class="inner">
+            <header id="header">
+                <a href="./index.html" class="logo"><strong>Vili Tajnic</strong> — Oracle &amp; Python Engineer</a>
+                <ul class="icons">
+                    <li><a href="https://twitter.com/vilita" class="icon brands fa-twitter" target="_blank"><span class="label">Twitter</span></a></li>
+                    <li><a href="https://www.linkedin.com/in/vilit/" class="icon brands fa-linkedin" target="_blank"><span class="label">LinkedIn</span></a></li>
+                    <li><a href="https://github.com/ViliTajnic" class="icon brands fa-github" target="_blank"><span class="label">GitHub</span></a></li>
+                </ul>
+            </header>
+            <section>
+                <header class="main">
+                    <h1>004 — Oracle 26ai Free on Docker</h1>
+                    <p>Running a full Oracle 26ai database locally on macOS with Colima and Docker — and wiring it up with SQLcl Connection Manager</p>
+                </header>
+                <span class="image main"><img src="./static/assets/images/Image_w4.png" alt="" /></span>
+
+                <hr class="major" />
+                <h2>1. Why Run Oracle 26ai Locally</h2>
+                <p>Cloud databases are great for production. For development, iteration, and experimentation they come with friction — latency, cost, shared environments, and the overhead of managing cloud credentials just to run a quick test. A local Oracle instance changes that entirely.</p>
+                <p>Oracle Database 26ai Free is the full Oracle database engine, available as a container image, with no license cost and no feature restrictions that matter for development. You get the complete SQL engine, PL/SQL, JSON, and — critically — native vector search with the <code>VECTOR</code> datatype and HNSW indexing. All of it running on your laptop, offline if needed, restarting in seconds.</p>
+                <p>This article walks through getting Oracle 26ai Free running on macOS using Colima and Docker, then connecting to it cleanly using SQLcl Connection Manager — so your local instance is one command away from any terminal session.</p>
+
+                <hr class="major" />
+                <h2>2. Prerequisites</h2>
+                <p>You will need the following tools installed before starting:</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>Tool</th><th>Purpose</th><th>Install</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Colima</strong></td><td>Container runtime for macOS (Docker Desktop alternative)</td><td><code>brew install colima</code></td></tr>
+                            <tr><td><strong>Docker CLI</strong></td><td>Container management commands</td><td><code>brew install docker</code></td></tr>
+                            <tr><td><strong>SQLcl</strong></td><td>Oracle command-line SQL client</td><td><a href="https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/" target="_blank">oracle.com/sqlcl</a></td></tr>
+                            <tr><td><strong>Oracle account</strong></td><td>Required to pull from Oracle Container Registry</td><td><a href="https://profile.oracle.com/myprofile/account/create-account.jspx" target="_blank">profile.oracle.com</a></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>If you do not have Colima and Docker installed yet:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>brew install colima docker</code></pre>
+
+                <hr class="major" />
+                <h2>3. Start Colima with Enough Resources</h2>
+                <p>Oracle Database needs meaningful memory and disk to start reliably. The default Colima VM is undersized for it. Start Colima with at least 4 GB of RAM and 60 GB of disk:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>colima start --cpu 2 --memory 4 --disk 60</code></pre>
+
+                <blockquote>
+                    <strong>Apple Silicon (M-series) note:</strong> Oracle's container image is built for <code>linux/amd64</code>. Colima handles this transparently on Apple Silicon via Rosetta 2 emulation — no extra flags needed. Startup will be slower than on Intel, but it works reliably. If you have 16 GB of RAM, bumping <code>--memory</code> to 6 makes the database noticeably more responsive.
+                </blockquote>
+
+                <p>To check that Colima is running:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>colima status</code></pre>
+
+                <hr class="major" />
+                <h2>4. Log in to Oracle Container Registry</h2>
+                <p>Oracle's container images require accepting a license agreement before pulling. Go to <a href="https://container-registry.oracle.com" target="_blank">container-registry.oracle.com</a>, sign in with your Oracle account, navigate to <strong>Database → Free</strong>, and accept the license. You only need to do this once.</p>
+                <p>Then authenticate Docker with the registry:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>docker login container-registry.oracle.com</code></pre>
+                <p>Enter your Oracle account email and password when prompted.</p>
+
+                <hr class="major" />
+                <h2>5. Run the Oracle 26ai Free Container</h2>
+                <p>Pull and start the container in a single command. The <code>ORACLE_PWD</code> environment variable sets the password for the <code>SYS</code>, <code>SYSTEM</code>, and <code>PDBADMIN</code> accounts. The volume mount keeps your data across container restarts:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>docker run -d \
+  --name oracle26ai \
+  -p 1521:1521 \
+  -e ORACLE_PWD=YourStrongPassword \
+  -v oracle26ai-data:/opt/oracle/oradata \
+  container-registry.oracle.com/database/free:latest</code></pre>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>Flag</th><th>What it does</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>-d</code></td><td>Run in background (detached)</td></tr>
+                            <tr><td><code>--name oracle26ai</code></td><td>Give the container a memorable name</td></tr>
+                            <tr><td><code>-p 1521:1521</code></td><td>Expose the Oracle listener port to localhost</td></tr>
+                            <tr><td><code>-e ORACLE_PWD</code></td><td>Set SYS / SYSTEM / PDBADMIN password</td></tr>
+                            <tr><td><code>-v oracle26ai-data:...</code></td><td>Persist database files in a named Docker volume</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <hr class="major" />
+                <h2>6. Wait for the Database to Be Ready</h2>
+                <p>Oracle takes a few minutes to initialise on first run — it is creating the CDB, the PDB, and all the system tablespaces. Follow the logs:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>docker logs -f oracle26ai</code></pre>
+
+                <p>Wait until you see this line — it means the database is fully up and accepting connections:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>#########################
+DATABASE IS READY TO USE!
+#########################</code></pre>
+
+                <p>On Apple Silicon with 4 GB allocated, expect 3–5 minutes on first startup. Subsequent starts (with the volume already initialised) are much faster — typically under a minute.</p>
+
+                <blockquote>
+                    <strong>Service names to know:</strong> The container runs two database services. <code>FREE</code> is the Container Database (CDB) — the root. <code>FREEPDB1</code> is the Pluggable Database (PDB) where you do your actual work. Always connect to <code>FREEPDB1</code> for development.
+                </blockquote>
+
+                <hr class="major" />
+                <h2>7. Connect with SQLcl and Save with Connection Manager</h2>
+                <p>Once the database is ready, open a new terminal and connect. If this is your first time connecting, do it manually to verify everything works:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>sql system/YourStrongPassword@localhost:1521/FREEPDB1</code></pre>
+
+                <p>Once confirmed, save it as a named Connection Manager entry so you never have to type the connection string again:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Save connection with stored password
+conn -save dev26ai -savepwd system/YourStrongPassword@localhost:1521/FREEPDB1
+
+-- Verify it works
+cm test dev26ai
+
+-- From now on, connect with a single command
+sql -name dev26ai</code></pre>
+
+                <p>The <code>-savepwd</code> flag stores the password encrypted in the Oracle DBTools connection store at <code>~/.dbtools/connections/</code>. You will not be prompted for it again. For a full Connection Manager reference, see <a href="./sqlcl-connection-manager.html">article 003</a>.</p>
+
+                <hr class="major" />
+                <h2>8. Verify the 26ai Features Are Available</h2>
+                <p>Connect to your instance and run a few quick checks to confirm you have a working Oracle 26ai environment:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>sql -name dev26ai
+
+-- Check database version
+SELECT banner FROM v$version;
+
+-- Confirm VECTOR datatype is available
+SELECT data_type FROM all_types WHERE type_name = 'VECTOR';
+
+-- Check vector memory configuration
+SELECT name, value FROM v$parameter WHERE name = 'vector_memory_size';
+
+-- Run a minimal vector test
+SELECT vector('[1.0, 2.0, 3.0]', 3, FLOAT32) FROM dual;</code></pre>
+
+                <p>If the <code>VECTOR</code> type query returns a row and the vector expression evaluates without error, your Oracle 26ai instance is fully operational and ready for vector search workloads.</p>
+
+                <hr class="major" />
+                <h2>9. Day-to-Day Usage</h2>
+                <p>Once everything is set up, your daily workflow is minimal:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Start Colima (if not already running)
+colima start
+
+# Start the database container
+docker start oracle26ai
+
+# Connect immediately
+sql -name dev26ai
+
+# Stop when done (preserves all data in the volume)
+docker stop oracle26ai</code></pre>
+
+                <blockquote>
+                    <strong>Tip: Auto-start on Colima launch</strong> — If you work with Oracle daily, add <code>docker start oracle26ai</code> to a shell alias or a Colima startup script so the container comes up automatically when you start your day.
+                </blockquote>
+
+                <h3>Useful container management commands</h3>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Check container status
+docker ps -a --filter name=oracle26ai
+
+# Follow logs (useful when troubleshooting startup)
+docker logs -f oracle26ai
+
+# Check resource usage
+docker stats oracle26ai
+
+# Completely reset the database (destructive — deletes all data)
+docker rm -f oracle26ai
+docker volume rm oracle26ai-data</code></pre>
+
+                <hr class="major" />
+                <h2>10. Troubleshooting</h2>
+
+                <h3>Container exits immediately after start</h3>
+                <p>Almost always a memory issue. Check that Colima was started with at least 4 GB (<code>colima status</code>) and that no other memory-heavy processes are competing. Run <code>docker logs oracle26ai</code> immediately after the exit to see the error.</p>
+
+                <h3>ORA-12541: No listener</h3>
+                <p>The database is still starting up. Wait for the "DATABASE IS READY TO USE!" log line before attempting to connect. If the message never appears, check <code>docker logs oracle26ai</code> for errors.</p>
+
+                <h3>Port 1521 already in use</h3>
+                <p>Another Oracle process or listener is already bound to port 1521 on your machine. Either stop the conflicting process or map the container to a different host port:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code># Use port 1522 on the host instead
+docker run -d --name oracle26ai -p 1522:1521 ...
+
+# Then connect on the alternate port
+conn -save dev26ai -savepwd system/YourStrongPassword@localhost:1522/FREEPDB1</code></pre>
+
+                <h3>Image pull fails with authentication error</h3>
+                <p>Make sure you have accepted the license on <a href="https://container-registry.oracle.com" target="_blank">container-registry.oracle.com</a> and that <code>docker login container-registry.oracle.com</code> completed successfully before pulling.</p>
+
+                <hr class="major" />
+                <h2>11. What's Next</h2>
+                <p>With a local Oracle 26ai instance running and connected via SQLcl Connection Manager, you have the foundation for everything else. The next article in this series builds directly on top of this setup: creating <code>VECTOR</code> columns, generating embeddings in Python, and running semantic similarity searches — all against your local database.</p>
+                <p><strong>If you followed along, you now have a full Oracle 26ai environment on your laptop — persistent, fast, and a single command away.</strong></p>
+
+                <h3>References</h3>
+                <ul>
+                    <li>Oracle Container Registry — Database Free Image. <a href="https://container-registry.oracle.com" target="_blank">container-registry.oracle.com</a></li>
+                    <li>Colima — Container Runtimes on macOS. <a href="https://github.com/abiosoft/colima" target="_blank">github.com/abiosoft/colima</a></li>
+                    <li>Oracle SQLcl Downloads and Documentation. <a href="https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/" target="_blank">oracle.com/sqlcl</a></li>
+                    <li>Oracle Database Free — Release Notes. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/index.html" target="_blank">docs.oracle.com</a></li>
+                </ul>
+
+                <ul class="actions">
+                    <li><a href="./sqlcl-connection-manager.html" class="button">&larr; Previous Article</a></li>
+                    <li><a href="./works.html" class="button">All Articles</a></li>
+                </ul>
+            </section>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <div class="inner">
+            <nav id="menu">
+                <header class="major"><h2>Menu</h2></header>
+                <ul>
+                    <li><a href="./index.html">Home</a></li>
+                    <li><a href="./about.html">About Me</a></li>
+                    <li>
+                        <span class="opener">Articles</span>
+                        <ul>
+                            <li><a href="./works.html">All Articles</a></li>
+                            <li><a href="./work.html">001 — Password Checker</a></li>
+                            <li><a href="./oci-autonomous-terraform.html">002 — OCI Terraform</a></li>
+                            <li><a href="./sqlcl-connection-manager.html">003 — SQLcl CM Article</a></li>
+                            <li><a href="./oracle-26ai-docker.html">004 — Oracle 26ai on Docker</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="./contact.html">Contact</a></li>
+                </ul>
+            </nav>
+            <section>
+                <header class="major"><h2>Get in touch</h2></header>
+                <ul class="contact">
+                    <li class="icon solid fa-envelope"><a href="mailto:vili.tajnic@gmail.com">vili.tajnic@gmail.com</a></li>
+                    <li class="icon solid fa-home">Ljubljana, Slovenia</li>
+                </ul>
+            </section>
+            <footer id="footer">
+                <p class="copyright">&copy; 2026 Vili Tajnic.</p>
+            </footer>
+        </div>
+    </div>
+</div>
+<script src="./static/assets/js/jquery.min.js"></script>
+<script src="./static/assets/js/browser.min.js"></script>
+<script src="./static/assets/js/breakpoints.min.js"></script>
+<script src="./static/assets/js/util.js"></script>
+<script src="./static/assets/js/main.js"></script>
+</body>
+</html>
