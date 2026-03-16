@@ -28,33 +28,124 @@
             <section>
                 <header class="main">
                     <h1>001 — Python Password Checker</h1>
+                    <p>Checking passwords against known data breaches using the Have I Been Pwned API — without ever sending your password over the internet</p>
                 </header>
 
                 <span class="image main"><img src="./static/assets/images/Image_w2.jpg" alt="" /></span>
 
-                <p>This Python project uses the Have I Been Pwned API (pwnedpasswords.com) to check whether a given password has appeared in any known data breaches. It's a practical security tool that demonstrates both Python programming skills and an understanding of real-world API integration.</p>
+                <hr class="major" />
+                <h2>1. What This Does</h2>
+                <p>This is a command-line Python script that checks one or more passwords against the <a href="https://haveibeenpwned.com/" target="_blank">Have I Been Pwned</a> (HIBP) breach database. If a password has appeared in a known data breach, the script tells you how many times — so you know to stop using it.</p>
+                <p>What makes it worth looking at is the privacy model. The password is never transmitted anywhere. Not even a hash of it. The script uses a technique called <strong>k-anonymity</strong> to query the API without revealing what it is looking for. More on that below.</p>
 
-                <p>What makes this project particularly interesting from a security standpoint is the use of k-anonymity — a privacy-preserving technique that ensures your actual password is never transmitted over the internet. Only the first 5 characters of the password's SHA-1 hash are sent to the API, and the matching is done locally.</p>
+                <blockquote>
+                    Source: <a href="https://github.com/ViliTajnic/passwordchecker" target="_blank">github.com/ViliTajnic/passwordchecker</a>
+                </blockquote>
 
-                <blockquote>"password is never sent/passed through the internet for checking" — <a href="https://github.com/ViliTajnic/passwordchecker">github.com/ViliTajnic/passwordchecker</a></blockquote>
+                <hr class="major" />
+                <h2>2. The k-Anonymity Model</h2>
+                <p>The HIBP API does not accept a full password or a full hash — it accepts only the first 5 characters of a SHA-1 hash. It then returns a list of all hash suffixes in its database that start with those 5 characters, along with breach counts.</p>
+                <p>The full matching is done locally. The server never sees enough to reconstruct the original query. This is the k-anonymity guarantee: among the many hashes that share a 5-character prefix, the API cannot tell which one you are checking.</p>
 
-                <div class="row">
-                    <div class="col-6 col-12-small">
-                        <h3>How It Works</h3>
-                        <p>The script takes a password as input, generates a SHA-1 hash, sends the first 5 characters to the HIBP API, and receives back a list of hash suffixes with breach counts. It then checks locally if the full hash appears in the response — ensuring complete password privacy throughout the entire process.</p>
-                        <h3>Key Features</h3>
-                        <ul>
-                            <li>Secure k-anonymity model — password never leaves your machine</li>
-                            <li>Real-time breach database lookup via HIBP API</li>
-                            <li>Returns count of times the password has been seen in breaches</li>
-                            <li>Command-line interface for easy integration</li>
-                            <li>Clean, readable Python code with error handling</li>
-                        </ul>
-                    </div>
-                    <div class="col-6 col-12-small">
-                        <span class="image fit"><img src="./static/assets/images/pass_checker.jpg" alt="Password Checker Screenshot" /></span>
-                    </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Step</th><th>Where it happens</th><th>What is sent / kept</th></tr></thead>
+                        <tbody>
+                            <tr><td>SHA-1 hash the password</td><td>Local</td><td>Nothing sent yet</td></tr>
+                            <tr><td>Send first 5 hex chars of hash</td><td>→ HIBP API</td><td>e.g. <code>5BAA6</code></td></tr>
+                            <tr><td>Receive matching hash suffixes + counts</td><td>← HIBP API</td><td>Hundreds of partial hashes</td></tr>
+                            <tr><td>Check if full hash suffix is in the list</td><td>Local</td><td>Password never leaves machine</td></tr>
+                        </tbody>
+                    </table>
                 </div>
+
+                <hr class="major" />
+                <h2>3. The Complete Code</h2>
+                <p>The entire script is 30 lines. Here it is in full, exactly as it appears in the repository:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>import requests
+import hashlib
+import sys
+
+def request_api_data(query_char):
+    url = 'https://api.pwnedpasswords.com/range/' + query_char
+    res = requests.get(url)
+    if res.status_code != 200:
+        raise RuntimeError(f'Error fetching: {res.status_code}, check the api and try again')
+    return res
+
+def get_password_leaks_count(hashes, hash_to_check):
+    hashes = (line.split(':') for line in hashes.text.splitlines())
+    for h, count in hashes:
+        if h == hash_to_check:
+            return count
+    return 0
+
+def pwned_api_check(password):
+    sha1password = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+    first5_char, tail = sha1password[:5], sha1password[5:]
+    response = request_api_data(first5_char)
+    return get_password_leaks_count(response, tail)
+
+def main(args):
+    for password in args:
+        count = pwned_api_check(password)
+        if count:
+            print(f'{password} was found {count} times... you should probably change your password!')
+        else:
+            print(f'{password} was NOT found. Please keep your password safe!')
+    return 'Check completed succesfuly!'
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))</code></pre>
+
+                <hr class="major" />
+                <h2>4. Code Walkthrough</h2>
+
+                <h3>request_api_data</h3>
+                <p>Takes the first 5 characters of the SHA-1 hash and hits the HIBP range endpoint. Raises a <code>RuntimeError</code> on any non-200 response so failures are explicit rather than silently returning empty results.</p>
+
+                <h3>get_password_leaks_count</h3>
+                <p>Parses the API response line by line. Each line is in the format <code>HASH_SUFFIX:COUNT</code>. The function uses a generator expression to split lazily — memory-efficient for the hundreds of lines the API returns. If the full hash suffix matches, the breach count is returned; otherwise <code>0</code>.</p>
+
+                <h3>pwned_api_check</h3>
+                <p>The core of the privacy model. It SHA-1 hashes the password, converts to uppercase hex (matching the API's response format), and splits into the 5-char prefix sent to the API and the tail kept locally for comparison.</p>
+
+                <h3>main</h3>
+                <p>Iterates over all passwords passed as command-line arguments and prints a result for each. Multiple passwords can be checked in a single run.</p>
+
+                <hr class="major" />
+                <h2>5. Usage</h2>
+                <p>Install the only dependency, then run with one or more passwords as arguments:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>pip install requests
+
+python checkmypass.py password123 correcthorsebatterystaple</code></pre>
+
+                <p>Example output:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>password123 was found 247116 times... you should probably change your password!
+correcthorsebatterystaple was NOT found. Please keep your password safe!</code></pre>
+
+                <hr class="major" />
+                <h2>6. Code Notes</h2>
+                <p>The script works correctly. A few things worth noting:</p>
+                <ul>
+                    <li><strong>count is a string</strong> — <code>get_password_leaks_count</code> returns the count as a string (from <code>line.split(':')</code>). The <code>if count:</code> check in <code>main</code> works because a non-empty string is truthy in Python, and it prints fine. If you wanted to compare it numerically (e.g. <code>if count &gt; 10</code>), you would need <code>int(count)</code>.</li>
+                    <li><strong>sys.exit pattern</strong> — <code>sys.exit(main(sys.argv[1:]))</code> passes the return string <code>'Check completed succesfuly!'</code> to <code>sys.exit</code>. On most systems, a non-integer argument to <code>sys.exit</code> prints the string to stderr and exits with code 1. For a clean exit, calling <code>main()</code> directly without wrapping in <code>sys.exit</code> is cleaner.</li>
+                    <li><strong>Typo</strong> — <code>'Check completed succesfuly!'</code> — "succesfuly" should be "successfully". Minor, but worth fixing if you fork the project.</li>
+                    <li><strong>No rate limiting or retry logic</strong> — fine for personal use; the HIBP API is generous. For batch checking of many passwords, adding a small delay between requests is courteous.</li>
+                </ul>
+
+                <hr class="major" />
+                <h2>7. Why This Project</h2>
+                <p>It is a small script, but it demonstrates several things clearly: working with external APIs, using <code>hashlib</code> for cryptographic operations, understanding a real-world privacy technique, and structuring Python code into focused single-purpose functions. The k-anonymity model is the same one used by browser password managers and enterprise security tools — understanding it from first principles is worthwhile.</p>
+
+                <h3>References</h3>
+                <ul>
+                    <li>Have I Been Pwned — Pwned Passwords API. <a href="https://haveibeenpwned.com/API/v3#PwnedPasswords" target="_blank">haveibeenpwned.com/API/v3</a></li>
+                    <li>Cloudflare — k-Anonymity explained. <a href="https://blog.cloudflare.com/validating-leaked-passwords-with-k-anonymity/" target="_blank">blog.cloudflare.com</a></li>
+                    <li>Source code. <a href="https://github.com/ViliTajnic/passwordchecker" target="_blank">github.com/ViliTajnic/passwordchecker</a></li>
+                </ul>
 
                 <ul class="actions">
                     <li><a href="./works.html" class="button">All Articles</a></li>
