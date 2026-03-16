@@ -245,22 +245,22 @@ TEMPLATE = """
 &lt;body&gt;
   &lt;h1&gt;Oracle 26ai — Vector Search&lt;/h1&gt;
   &lt;form method="post"&gt;
-    &lt;input type="text" name="query" placeholder="Ask anything..." value="{{ query }}" autofocus /&gt;
+    &lt;input type="text" name="query" placeholder="Ask anything..." value="&#123;&#123; query &#125;&#125;" autofocus /&gt;
     &lt;button type="submit"&gt;Search&lt;/button&gt;
   &lt;/form&gt;
 
-  {% if results %}
-    &lt;p&gt;Top {{ results|length }} results for &lt;strong&gt;{{ query }}&lt;/strong&gt;&lt;/p&gt;
-    {% for question, answer, distance in results %}
+  &#123;% if results %&#125;
+    &lt;p&gt;Top &#123;&#123; results|length &#125;&#125; results for &lt;strong&gt;&#123;&#123; query &#125;&#125;&lt;/strong&gt;&lt;/p&gt;
+    &#123;% for question, answer, distance in results %&#125;
       &lt;div class="result"&gt;
-        &lt;div class="question"&gt;{{ question }}&lt;/div&gt;
-        &lt;div class="score"&gt;Cosine distance: {{ "%.4f"|format(distance) }}&lt;/div&gt;
-        &lt;div class="answer"&gt;{{ answer }}&lt;/div&gt;
+        &lt;div class="question"&gt;&#123;&#123; question &#125;&#125;&lt;/div&gt;
+        &lt;div class="score"&gt;Cosine distance: &#123;&#123; "%.4f"|format(distance) &#125;&#125;&lt;/div&gt;
+        &lt;div class="answer"&gt;&#123;&#123; answer &#125;&#125;&lt;/div&gt;
       &lt;/div&gt;
-    {% endfor %}
-  {% elif query %}
+    &#123;% endfor %&#125;
+  &#123;% elif query %&#125;
     &lt;p&gt;No results found.&lt;/p&gt;
-  {% endif %}
+  &#123;% endif %&#125;
 &lt;/body&gt;
 &lt;/html&gt;
 """
