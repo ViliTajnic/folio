@@ -29,7 +29,7 @@
                 <hr class="major" />
                 <h2>1. Why Run Oracle 26ai Locally</h2>
                 <p>Cloud databases are great for production. For development, iteration, and experimentation they come with friction — latency, cost, shared environments, and the overhead of managing cloud credentials just to run a quick test. A local Oracle instance changes that entirely.</p>
-                <p>Oracle Database 26ai Free is the full Oracle database engine, available as a container image, with no license cost and no feature restrictions that matter for development. You get the complete SQL engine, PL/SQL, JSON, and — critically — native vector search with the <code>VECTOR</code> datatype and HNSW indexing. All of it running on your laptop, offline if needed, restarting in seconds.</p>
+                <p>Oracle Database 26ai Free is the full Oracle database engine, available as a container image, with no license cost. The Free edition has some resource limits (CPU, RAM, storage) but includes the features most relevant for development: the complete SQL engine, PL/SQL, JSON, and native vector search with the <code>VECTOR</code> datatype and HNSW indexing. All of it running on your laptop, restarting in seconds — though it does require a network connection on first pull.</p>
                 <p>This article walks through getting Oracle 26ai Free running on macOS using Colima and Docker, then connecting to it cleanly using SQLcl Connection Manager — so your local instance is one command away from any terminal session.</p>
 
                 <hr class="major" />
@@ -60,7 +60,7 @@
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>colima start --cpu 2 --memory 4 --disk 60</code></pre>
 
                 <blockquote>
-                    <strong>Apple Silicon (M-series) note:</strong> Oracle's container image is built for <code>linux/amd64</code>. Colima handles this transparently on Apple Silicon via Rosetta 2 emulation — no extra flags needed. Startup will be slower than on Intel, but it works reliably. If you have 16 GB of RAM, bumping <code>--memory</code> to 6 makes the database noticeably more responsive.
+                    <strong>Apple Silicon (M-series) note:</strong> Check the Oracle Container Registry for the current image architecture. Recent Oracle Database Free releases may include a native <code>linux/arm64</code> image alongside the <code>linux/amd64</code> one. If only an amd64 image is available, Colima can run it via Rosetta 2 emulation — startup will be slower but generally works. If you have 16 GB of RAM, bumping <code>--memory</code> to 6 makes the database noticeably more responsive.
                 </blockquote>
 
                 <p>To check that Colima is running:</p>
@@ -114,7 +114,7 @@ DATABASE IS READY TO USE!
                 <p>On Apple Silicon with 4 GB allocated, expect 3–5 minutes on first startup. Subsequent starts (with the volume already initialised) are much faster — typically under a minute.</p>
 
                 <blockquote>
-                    <strong>Service names to know:</strong> The container runs two database services. <code>FREE</code> is the Container Database (CDB) — the root. <code>FREEPDB1</code> is the Pluggable Database (PDB) where you do your actual work. Always connect to <code>FREEPDB1</code> for development.
+                    <strong>Service names to know:</strong> The container runs two database services. <code>FREE</code> is the Container Database (CDB) — the root. <code>FREEPDB1</code> is the Pluggable Database (PDB) where you do most development work. For this guide, connect to <code>FREEPDB1</code>.
                 </blockquote>
 
                 <hr class="major" />
@@ -123,6 +123,7 @@ DATABASE IS READY TO USE!
 
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>sql system/YourStrongPassword@localhost:1521/FREEPDB1</code></pre>
 
+                <p>Note: passing the password on the command line is fine for a quick local test but will be visible in shell history. For regular use, save it with Connection Manager instead (see below).</p>
                 <p>Once confirmed, save it as a named Connection Manager entry so you never have to type the connection string again:</p>
 
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Save connection with stored password
@@ -145,16 +146,13 @@ sql -name dev26ai</code></pre>
 -- Check database version
 SELECT banner FROM v$version;
 
--- Confirm VECTOR datatype is available
-SELECT data_type FROM all_types WHERE type_name = 'VECTOR';
-
 -- Check vector memory configuration
 SELECT name, value FROM v$parameter WHERE name = 'vector_memory_size';
 
--- Run a minimal vector test
-SELECT vector('[1.0, 2.0, 3.0]', 3, FLOAT32) FROM dual;</code></pre>
+-- VECTOR smoke test: should return a vector value without error
+SELECT VECTOR('[1.0, 2.0, 3.0]', 3, FLOAT32) FROM dual;</code></pre>
 
-                <p>If the <code>VECTOR</code> type query returns a row and the vector expression evaluates without error, your Oracle 26ai instance is fully operational and ready for vector search workloads.</p>
+                <p>Note: <code>SYSTEM</code> is used here for a quick connectivity check. For any ongoing development work, creating a dedicated schema user with least-privilege grants is recommended. If the <code>VECTOR</code> smoke test evaluates without error, your Oracle 26ai instance is up and ready for vector workloads.</p>
 
                 <hr class="major" />
                 <h2>9. Day-to-Day Usage</h2>
