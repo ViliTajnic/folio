@@ -35,7 +35,7 @@
                     <li>A search script that takes a plain-English question, embeds it, and finds the most semantically similar answers in the database using Oracle's <code>VECTOR_DISTANCE</code> function</li>
                     <li>A minimal Flask web app that wraps the search into a local browser interface</li>
                 </ul>
-                <p>No external API keys. No cloud services. Everything runs on your laptop against the local Oracle instance from article 004.</p>
+                <p>No external API keys or cloud services required. Everything runs on your laptop against the local Oracle instance from article 004, after installing the required packages.</p>
 
                 <hr class="major" />
                 <h2>2. Prerequisites and Setup</h2>
@@ -132,6 +132,8 @@ print("Loading embedding model...")
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # --- Connect to Oracle ---
+# Note: using SYSTEM here for simplicity in this local demo only.
+# For any real application use a dedicated least-privilege schema user.
 conn = oracledb.connect(
     user="system",
     password="YourStrongPassword",
@@ -179,6 +181,7 @@ def search(query: str, top_k: int = 3):
     embedding = model.encode(query).tolist()
     vec = array.array("f", embedding)
 
+    # Note: SYSTEM is used for this local demo only — use a dedicated user in production.
     conn = oracledb.connect(
         user="system",
         password="YourStrongPassword",
@@ -209,7 +212,7 @@ if __name__ == "__main__":
                 <p>Test it from the terminal:</p>
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>python search.py how do I find similar text in a database</code></pre>
 
-                <p>Oracle ranks results by cosine distance — lower is more similar. A distance of <code>0.0</code> would be an exact match; anything below <code>0.3</code> is typically a strong semantic match.</p>
+                <p>Oracle ranks results by cosine distance — lower is more similar. A distance of <code>0.0</code> would be an exact match. Lower values generally indicate stronger semantic similarity, but useful thresholds depend on the embedding model and dataset — do not treat any fixed number as a universal rule.</p>
 
                 <hr class="major" />
                 <h2>6. Build the Flask Web App</h2>
@@ -255,6 +258,8 @@ TEMPLATE = """
         &lt;div class="answer"&gt;{{ answer }}&lt;/div&gt;
       &lt;/div&gt;
     {% endfor %}
+  {% elif query %}
+    &lt;p&gt;No results found.&lt;/p&gt;
   {% endif %}
 &lt;/body&gt;
 &lt;/html&gt;
@@ -296,7 +301,7 @@ if __name__ == "__main__":
                 </ol>
 
                 <blockquote>
-                    <strong>Why cosine distance?</strong> Cosine distance measures the angle between two vectors rather than their absolute magnitude. This makes it robust to differences in text length — a short question and a long answer can still match well if they are about the same topic. It is the standard metric for text embedding similarity.
+                    <strong>Why cosine distance?</strong> Cosine distance measures the angle between two vectors rather than their absolute magnitude. This makes it robust to differences in text length — a short question and a long answer can still match well if they are about the same topic. Cosine distance is a common default for text embeddings; other metrics like EUCLIDEAN or DOT may suit different use cases.
                 </blockquote>
 
                 <hr class="major" />
@@ -306,7 +311,7 @@ if __name__ == "__main__":
                 <div class="row">
                     <div class="col-6 col-12-small">
                         <h3>Add an HNSW index</h3>
-                        <p>For larger datasets, add a vector index to Oracle for fast approximate nearest-neighbour search:</p>
+                        <p>The similarity query in this demo works fine on a small table — Oracle ranks all rows directly. For larger datasets, a vector index makes search fast and scalable via approximate nearest-neighbour lookup:</p>
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>CREATE VECTOR INDEX faq_hnsw_idx
 ON faq_items(embedding)
 ORGANIZATION INMEMORY NEIGHBOR
@@ -325,8 +330,8 @@ ADD answer_embedding VECTOR(384, FLOAT32);</code></pre>
                 <hr class="major" />
                 <h2>10. Conclusion</h2>
                 <p>In under 100 lines of Python you have a working semantic search system backed by Oracle 26ai. The search finds relevant results even when the query uses completely different words than the stored FAQ — because it is matching meaning, not keywords.</p>
-                <p>This is the foundation of every RAG pipeline: embed your knowledge base, store the vectors in a database, retrieve the most relevant chunks at query time, and pass them to a language model for a final answer. Oracle 26ai handles the vector storage and retrieval natively — no separate vector database required.</p>
-                <p><strong>Everything built here runs entirely on your laptop, against the local Oracle instance from article 004 — no cloud, no API keys, no cost.</strong></p>
+                <p>This is a core retrieval building block used in many RAG pipelines: embed your knowledge base, store the vectors in a database, and retrieve the most relevant chunks at query time. Full RAG pipelines typically also involve chunking, metadata filtering, reranking, prompt assembly, and answer generation — but retrieval is where it starts. Oracle 26ai handles the vector storage and retrieval natively — no separate vector database required.</p>
+                <p><strong>Everything built here runs against the local Oracle instance from article 004 — no external API keys or cloud services required.</strong></p>
 
                 <h3>References</h3>
                 <ul>
