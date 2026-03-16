@@ -1,0 +1,387 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>005 — Oracle Vector Search in Python — Vili Tajnic</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="./static/assets/css/main.css" />
+    <link rel="icon" type="image/x-icon" href="./static/favicon.ico" />
+</head>
+<body class="is-preload">
+<div id="wrapper">
+    <div id="main">
+        <div class="inner">
+            <header id="header">
+                <a href="./index.html" class="logo"><strong>Vili Tajnic</strong> — Oracle &amp; Python Engineer</a>
+                <ul class="icons">
+                    <li><a href="https://twitter.com/vilita" class="icon brands fa-twitter" target="_blank"><span class="label">Twitter</span></a></li>
+                    <li><a href="https://www.linkedin.com/in/vilit/" class="icon brands fa-linkedin" target="_blank"><span class="label">LinkedIn</span></a></li>
+                    <li><a href="https://github.com/ViliTajnic" class="icon brands fa-github" target="_blank"><span class="label">GitHub</span></a></li>
+                </ul>
+            </header>
+            <section>
+                <header class="main">
+                    <h1>005 — Oracle Vector Search in Python</h1>
+                    <p>Storing embeddings in Oracle 26ai, running semantic similarity search, and wrapping it in a small Flask web app — all locally</p>
+                </header>
+                <span class="image main"><img src="./static/assets/images/Image_w5.jpg" alt="" /></span>
+
+                <hr class="major" />
+                <h2>1. What We Are Building</h2>
+                <p>This article builds directly on top of <a href="./oracle-26ai-docker.html">article 004</a> — you need Oracle 26ai running locally in Docker before starting here.</p>
+                <p>We will build a small semantic search system in three parts:</p>
+                <ul>
+                    <li>A Python script that loads a FAQ dataset, generates text embeddings using <code>sentence-transformers</code>, and stores them in an Oracle 26ai <code>VECTOR</code> column</li>
+                    <li>A search script that takes a plain-English question, embeds it, and finds the most semantically similar answers in the database using Oracle's <code>VECTOR_DISTANCE</code> function</li>
+                    <li>A minimal Flask web app that wraps the search into a local browser interface</li>
+                </ul>
+                <p>No external API keys. No cloud services. Everything runs on your laptop against the local Oracle instance from article 004.</p>
+
+                <hr class="major" />
+                <h2>2. Prerequisites and Setup</h2>
+                <p>Install the required Python packages:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>pip install oracledb sentence-transformers flask</code></pre>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>Package</th><th>Purpose</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>oracledb</code></td><td>Oracle Database driver for Python — thin mode, no Oracle Client required</td></tr>
+                            <tr><td><code>sentence-transformers</code></td><td>Local embedding model — runs entirely on your machine</td></tr>
+                            <tr><td><code>flask</code></td><td>Minimal web framework for the search UI</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Make sure your Oracle 26ai container is running and your Connection Manager entry is set up:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>docker start oracle26ai
+sql -name dev26ai</code></pre>
+
+                <hr class="major" />
+                <h2>3. Create the Vector Table</h2>
+                <p>Connect to your local Oracle 26ai instance and create a table with a <code>VECTOR</code> column. We are using 384 dimensions to match the <code>all-MiniLM-L6-v2</code> model we will use for embeddings:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Run inside SQLcl (sql -name dev26ai)
+CREATE TABLE faq_items (
+    id        NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    question  VARCHAR2(1000),
+    answer    CLOB,
+    embedding VECTOR(384, FLOAT32)
+);
+
+-- Verify the table was created
+DESC faq_items;</code></pre>
+
+                <blockquote>
+                    <strong>VECTOR(384, FLOAT32)</strong> — the two parameters are the number of dimensions and the numeric type. <code>FLOAT32</code> is the right balance of precision and storage for most use cases. The dimension count must match your embedding model exactly.
+                </blockquote>
+
+                <hr class="major" />
+                <h2>4. Load and Embed the FAQ Data</h2>
+                <p>Create a file called <code>load_faq.py</code>. This script defines a small FAQ dataset, generates an embedding for each question using <code>sentence-transformers</code>, and inserts everything into Oracle:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>import oracledb
+from sentence_transformers import SentenceTransformer
+import array
+
+# --- FAQ dataset ---
+FAQ = [
+    ("What is Oracle Database 26ai?",
+     "Oracle Database 26ai is Oracle's latest database release with native AI capabilities, "
+     "including the VECTOR datatype, HNSW indexing, and the DBMS_VECTOR package for building "
+     "AI-powered applications directly inside the database."),
+
+    ("How do I connect to Oracle with Python?",
+     "Use the oracledb package in thin mode — no Oracle Client installation required. "
+     "Call oracledb.connect() with your username, password, and DSN string."),
+
+    ("What is a vector embedding?",
+     "A vector embedding is a numerical representation of text (or other data) as a list of "
+     "floating-point numbers. Semantically similar texts produce embeddings that are close "
+     "together in vector space, which enables similarity search."),
+
+    ("What is HNSW indexing?",
+     "HNSW (Hierarchical Navigable Small World) is an approximate nearest-neighbour index "
+     "structure optimised for high-dimensional vector search. Oracle 26ai supports HNSW indexes "
+     "on VECTOR columns for fast similarity queries at scale."),
+
+    ("What is RAG?",
+     "Retrieval-Augmented Generation (RAG) is a pattern where relevant documents are retrieved "
+     "from a vector store and passed as context to a large language model, improving the "
+     "accuracy and grounding of AI-generated responses."),
+
+    ("How do I store embeddings in Oracle?",
+     "Create a table with a VECTOR column, generate embeddings in Python using a model like "
+     "sentence-transformers, convert the result to a Python array, and insert it like any "
+     "other column value using oracledb."),
+
+    ("What is sentence-transformers?",
+     "sentence-transformers is a Python library that provides pre-trained models for generating "
+     "high-quality text embeddings. The all-MiniLM-L6-v2 model produces 384-dimensional "
+     "embeddings and runs entirely locally without any API key."),
+
+    ("What is VECTOR_DISTANCE in Oracle?",
+     "VECTOR_DISTANCE is an Oracle SQL function that computes the distance between two vectors. "
+     "Supported metrics include COSINE, EUCLIDEAN, and DOT. Use it in ORDER BY to rank results "
+     "by semantic similarity."),
+]
+
+# --- Load embedding model ---
+print("Loading embedding model...")
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# --- Connect to Oracle ---
+conn = oracledb.connect(
+    user="system",
+    password="YourStrongPassword",
+    dsn="localhost:1521/FREEPDB1"
+)
+cursor = conn.cursor()
+
+# --- Clear existing data ---
+cursor.execute("TRUNCATE TABLE faq_items")
+
+# --- Insert FAQ items with embeddings ---
+print(f"Embedding and inserting {len(FAQ)} FAQ items...")
+for question, answer in FAQ:
+    embedding = model.encode(question).tolist()
+    vec = array.array("f", embedding)
+    cursor.execute(
+        "INSERT INTO faq_items (question, answer, embedding) VALUES (:1, :2, :3)",
+        [question, answer, vec]
+    )
+
+conn.commit()
+cursor.close()
+conn.close()
+print("Done. FAQ items loaded into Oracle.")</code></pre>
+
+                <p>Run it once to populate the table:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>python load_faq.py</code></pre>
+
+                <blockquote>
+                    <strong>First run note:</strong> <code>sentence-transformers</code> downloads the <code>all-MiniLM-L6-v2</code> model (~90 MB) on first use and caches it locally. Subsequent runs are instant.
+                </blockquote>
+
+                <hr class="major" />
+                <h2>5. Run a Similarity Search from Python</h2>
+                <p>Create <code>search.py</code> — a standalone script that takes a question as input and returns the most semantically similar FAQ entries from Oracle:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>import oracledb
+from sentence_transformers import SentenceTransformer
+import array
+import sys
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def search(query: str, top_k: int = 3):
+    embedding = model.encode(query).tolist()
+    vec = array.array("f", embedding)
+
+    conn = oracledb.connect(
+        user="system",
+        password="YourStrongPassword",
+        dsn="localhost:1521/FREEPDB1"
+    )
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT question, answer,
+               VECTOR_DISTANCE(embedding, :1, COSINE) AS distance
+        FROM   faq_items
+        ORDER  BY distance
+        FETCH  FIRST :2 ROWS ONLY
+    """, [vec, top_k])
+
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+if __name__ == "__main__":
+    query = " ".join(sys.argv[1:]) or "How does vector search work?"
+    print(f"\nQuery: {query}\n")
+    for question, answer, distance in search(query):
+        print(f"  [{distance:.4f}] {question}")
+        print(f"           {answer[:120]}...")
+        print()</code></pre>
+
+                <p>Test it from the terminal:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>python search.py how do I find similar text in a database</code></pre>
+
+                <p>Oracle ranks results by cosine distance — lower is more similar. A distance of <code>0.0</code> would be an exact match; anything below <code>0.3</code> is typically a strong semantic match.</p>
+
+                <hr class="major" />
+                <h2>6. Build the Flask Web App</h2>
+                <p>Create <code>app.py</code> — a minimal Flask app that exposes a search form and renders results:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>from flask import Flask, request, render_template_string
+from search import search
+
+app = Flask(__name__)
+
+TEMPLATE = """
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;Oracle Vector Search&lt;/title&gt;
+  &lt;style&gt;
+    body  { font-family: sans-serif; max-width: 800px; margin: 60px auto; padding: 0 20px; }
+    h1    { color: #c0392b; }
+    input[type=text] { width: 100%; padding: 10px; font-size: 1rem;
+                       border: 1px solid #ccc; border-radius: 4px; }
+    button { margin-top: 10px; padding: 10px 24px; background: #c0392b;
+             color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+    .result  { border-left: 4px solid #c0392b; padding: 12px 16px; margin: 16px 0;
+               background: #f9f9f9; border-radius: 0 4px 4px 0; }
+    .question { font-weight: bold; margin-bottom: 6px; }
+    .score    { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
+    .answer   { color: #333; line-height: 1.6; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Oracle 26ai — Vector Search&lt;/h1&gt;
+  &lt;form method="post"&gt;
+    &lt;input type="text" name="query" placeholder="Ask anything..." value="{{ query }}" autofocus /&gt;
+    &lt;button type="submit"&gt;Search&lt;/button&gt;
+  &lt;/form&gt;
+
+  {% if results %}
+    &lt;p&gt;Top {{ results|length }} results for &lt;strong&gt;{{ query }}&lt;/strong&gt;&lt;/p&gt;
+    {% for question, answer, distance in results %}
+      &lt;div class="result"&gt;
+        &lt;div class="question"&gt;{{ question }}&lt;/div&gt;
+        &lt;div class="score"&gt;Cosine distance: {{ "%.4f"|format(distance) }}&lt;/div&gt;
+        &lt;div class="answer"&gt;{{ answer }}&lt;/div&gt;
+      &lt;/div&gt;
+    {% endfor %}
+  {% endif %}
+&lt;/body&gt;
+&lt;/html&gt;
+"""
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    results = []
+    query = ""
+    if request.method == "POST":
+        query = request.form.get("query", "").strip()
+        if query:
+            results = search(query, top_k=3)
+    return render_template_string(TEMPLATE, results=results, query=query)
+
+if __name__ == "__main__":
+    app.run(debug=True)</code></pre>
+
+                <p>Start the app:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>python app.py</code></pre>
+                <p>Open <code>http://localhost:5000</code> in your browser. Type any question — even one that does not appear verbatim in the FAQ — and Oracle will return the most semantically relevant answers.</p>
+
+                <hr class="major" />
+                <h2>7. Project Structure</h2>
+                <p>Your working directory should look like this:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>vector-search/
+├── load_faq.py     # loads FAQ data + embeddings into Oracle
+├── search.py       # similarity search function
+└── app.py          # Flask web interface</code></pre>
+
+                <hr class="major" />
+                <h2>8. How It Works Under the Hood</h2>
+                <p>When you type a question into the search box, four things happen in sequence:</p>
+                <ol>
+                    <li><strong>Embed the query</strong> — <code>sentence-transformers</code> converts your question into a 384-dimensional float vector using the same model that encoded the FAQ data</li>
+                    <li><strong>Send to Oracle</strong> — the vector is passed as a bind variable to a SQL query</li>
+                    <li><strong>Oracle computes distances</strong> — <code>VECTOR_DISTANCE(embedding, :query, COSINE)</code> computes the cosine distance between every stored embedding and your query vector, entirely inside the database engine</li>
+                    <li><strong>Return top results</strong> — <code>ORDER BY distance FETCH FIRST 3 ROWS ONLY</code> returns the closest matches</li>
+                </ol>
+
+                <blockquote>
+                    <strong>Why cosine distance?</strong> Cosine distance measures the angle between two vectors rather than their absolute magnitude. This makes it robust to differences in text length — a short question and a long answer can still match well if they are about the same topic. It is the standard metric for text embedding similarity.
+                </blockquote>
+
+                <hr class="major" />
+                <h2>9. Extending the Project</h2>
+                <p>This is a minimal but fully functional vector search system. A few natural next steps:</p>
+
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>Add an HNSW index</h3>
+                        <p>For larger datasets, add a vector index to Oracle for fast approximate nearest-neighbour search:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>CREATE VECTOR INDEX faq_hnsw_idx
+ON faq_items(embedding)
+ORGANIZATION INMEMORY NEIGHBOR
+GRAPH DISTANCE COSINE
+WITH TARGET ACCURACY 95;</code></pre>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>Search over answers too</h3>
+                        <p>Embed the answer text instead of (or alongside) the question for broader semantic coverage:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Add a second vector column
+ALTER TABLE faq_items
+ADD answer_embedding VECTOR(384, FLOAT32);</code></pre>
+                    </div>
+                </div>
+
+                <hr class="major" />
+                <h2>10. Conclusion</h2>
+                <p>In under 100 lines of Python you have a working semantic search system backed by Oracle 26ai. The search finds relevant results even when the query uses completely different words than the stored FAQ — because it is matching meaning, not keywords.</p>
+                <p>This is the foundation of every RAG pipeline: embed your knowledge base, store the vectors in a database, retrieve the most relevant chunks at query time, and pass them to a language model for a final answer. Oracle 26ai handles the vector storage and retrieval natively — no separate vector database required.</p>
+                <p><strong>Everything built here runs entirely on your laptop, against the local Oracle instance from article 004 — no cloud, no API keys, no cost.</strong></p>
+
+                <h3>References</h3>
+                <ul>
+                    <li>Oracle Database 26ai — VECTOR Datatype Documentation. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/" target="_blank">docs.oracle.com</a></li>
+                    <li>python-oracledb — Oracle Database Driver for Python. <a href="https://python-oracledb.readthedocs.io/" target="_blank">python-oracledb.readthedocs.io</a></li>
+                    <li>sentence-transformers — all-MiniLM-L6-v2 Model. <a href="https://www.sbert.net/" target="_blank">sbert.net</a></li>
+                    <li>Jolliffe, C. (2025). <em>CM Basics — SQLcl Connection Manager.</em> <a href="https://blog.jolliffe.hk/2025/04/23/cm-basics.html" target="_blank">blog.jolliffe.hk</a></li>
+                </ul>
+
+                <ul class="actions">
+                    <li><a href="./oracle-26ai-docker.html" class="button">&larr; Previous Article</a></li>
+                    <li><a href="./works.html" class="button">All Articles</a></li>
+                </ul>
+            </section>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <div class="inner">
+            <nav id="menu">
+                <header class="major"><h2>Menu</h2></header>
+                <ul>
+                    <li><a href="./index.html">Home</a></li>
+                    <li><a href="./about.html">About Me</a></li>
+                    <li>
+                        <span class="opener">Articles</span>
+                        <ul>
+                            <li><a href="./works.html">All Articles</a></li>
+                            <li><a href="./work.html">001 — Password Checker</a></li>
+                            <li><a href="./oci-autonomous-terraform.html">002 — OCI Terraform</a></li>
+                            <li><a href="./sqlcl-connection-manager.html">003 — SQLcl CM Article</a></li>
+                            <li><a href="./oracle-26ai-docker.html">004 — Oracle 26ai on Docker</a></li>
+                            <li><a href="./oracle-vector-search-python.html">005 — Vector Search in Python</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="./contact.html">Contact</a></li>
+                </ul>
+            </nav>
+            <section>
+                <header class="major"><h2>Get in touch</h2></header>
+                <ul class="contact">
+                    <li class="icon solid fa-envelope"><a href="mailto:vili.tajnic@gmail.com">vili.tajnic@gmail.com</a></li>
+                    <li class="icon solid fa-home">Ljubljana, Slovenia</li>
+                </ul>
+            </section>
+            <footer id="footer">
+                <p class="copyright">&copy; 2026 Vili Tajnic.</p>
+            </footer>
+        </div>
+    </div>
+</div>
+<script src="./static/assets/js/jquery.min.js"></script>
+<script src="./static/assets/js/browser.min.js"></script>
+<script src="./static/assets/js/breakpoints.min.js"></script>
+<script src="./static/assets/js/util.js"></script>
+<script src="./static/assets/js/main.js"></script>
+</body>
+</html>
