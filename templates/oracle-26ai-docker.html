@@ -22,12 +22,12 @@
             <section>
                 <header class="main">
                     <h1>004 — Oracle 26ai Free on Docker</h1>
-                    <p>Running a full Oracle 26ai database locally on macOS with Colima and Docker — and wiring it up with SQLcl Connection Manager</p>
+                    <p>Running Oracle Database Free locally on macOS with Colima and Docker — and wiring it up with SQLcl Connection Manager</p>
                 </header>
                 <span class="image main"><img src="./static/assets/images/Image_w4.jpg" alt="" /></span>
 
                 <hr class="major" />
-                <h2>1. Why Run Oracle 26ai Locally</h2>
+                <h2>1. Why Run Oracle Database Free Locally</h2>
                 <p>Cloud databases are great for production. For development, iteration, and experimentation they come with friction — latency, cost, shared environments, and the overhead of managing cloud credentials just to run a quick test. A local Oracle instance changes that entirely.</p>
                 <p>Oracle Database 26ai Free is the full Oracle database engine, available as a container image, with no license cost. The Free edition has some resource limits (CPU, RAM, storage) but includes the features most relevant for development: the complete SQL engine, PL/SQL, JSON, and native vector search with the <code>VECTOR</code> datatype and HNSW indexing. All of it running on your laptop, restarting in seconds — though it does require a network connection on first pull.</p>
                 <p>This article walks through getting Oracle 26ai Free running on macOS using Colima and Docker, then connecting to it cleanly using SQLcl Connection Manager — so your local instance is one command away from any terminal session.</p>
@@ -60,7 +60,7 @@
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>colima start --cpu 2 --memory 4 --disk 60</code></pre>
 
                 <blockquote>
-                    <strong>Apple Silicon (M-series) note:</strong> Check the Oracle Container Registry for the current image architecture. Recent Oracle Database Free releases may include a native <code>linux/arm64</code> image alongside the <code>linux/amd64</code> one. If only an amd64 image is available, Colima can run it via Rosetta 2 emulation — startup will be slower but generally works. If you have 16 GB of RAM, bumping <code>--memory</code> to 6 makes the database noticeably more responsive.
+                    <strong>Apple Silicon (M-series) note:</strong> Check the Oracle Container Registry manifest for whatever <code>:latest</code> points to when you pull. Sometimes the newest Oracle Database Free image is multi-architecture; sometimes it is amd64-only. If the current <code>:latest</code> image is amd64-only, Colima can still run it on Apple Silicon via Rosetta emulation, but startup will be slower. In that case, restart Colima with Apple Virtualization and Rosetta enabled: <code>colima start --vm-type=vz --vz-rosetta --cpu 2 --memory 4 --disk 60</code>. If you have 16 GB of RAM, bumping <code>--memory</code> to 6 makes the database noticeably more responsive.
                 </blockquote>
 
                 <p>To check that Colima is running:</p>
@@ -74,8 +74,8 @@
                 <p>Enter your Oracle account email and password when prompted.</p>
 
                 <hr class="major" />
-                <h2>5. Run the Oracle 26ai Free Container</h2>
-                <p>Pull and start the container in a single command. The <code>ORACLE_PWD</code> environment variable sets the password for the <code>SYS</code>, <code>SYSTEM</code>, and <code>PDBADMIN</code> accounts. The volume mount keeps your data across container restarts:</p>
+                <h2>5. Run the Oracle Database Free Container</h2>
+                <p>Pull and start the container in a single command. The <code>ORACLE_PWD</code> environment variable sets the password for the <code>SYS</code>, <code>SYSTEM</code>, and <code>PDBADMIN</code> accounts. The volume mount keeps your data across container restarts. This guide intentionally uses <code>:latest</code> so the setup tracks the newest Oracle Database Free image available in Oracle Container Registry:</p>
 
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>docker run -d \
   --name oracle26ai \
@@ -99,19 +99,23 @@
                     </table>
                 </div>
 
+                <p>If you need fully reproducible builds, replace <code>:latest</code> with a pinned image tag. For a laptop development environment, keeping <code>:latest</code> is usually the simpler tradeoff.</p>
+
                 <hr class="major" />
                 <h2>6. Wait for the Database to Be Ready</h2>
                 <p>Oracle takes a few minutes to initialise on first run — it is creating the CDB, the PDB, and all the system tablespaces. Follow the logs:</p>
 
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>docker logs -f oracle26ai</code></pre>
 
-                <p>Wait until you see this line — it means the database is fully up and accepting connections:</p>
+                <p>Follow the logs during first boot, but treat container health as the real readiness check:</p>
 
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>#########################
 DATABASE IS READY TO USE!
 #########################</code></pre>
 
-                <p>On Apple Silicon with 4 GB allocated, expect 3–5 minutes on first startup. Subsequent starts (with the volume already initialised) are much faster — typically under a minute.</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>docker ps --filter name=oracle26ai</code></pre>
+
+                <p>When the container shows <code>(healthy)</code>, the listener and database are ready for normal use. The log banner above is still useful as a visual cue, but health status is the more reliable check across image revisions. First boot on a fresh volume is always the slowest because Oracle has to initialise the database files. Subsequent starts are much faster.</p>
 
                 <blockquote>
                     <strong>Service names to know:</strong> The container runs two database services. <code>FREE</code> is the Container Database (CDB) — the root. <code>FREEPDB1</code> is the Pluggable Database (PDB) where you do most development work. For this guide, connect to <code>FREEPDB1</code>.
@@ -135,24 +139,21 @@ cm test dev26ai
 -- From now on, connect with a single command
 sql -name dev26ai</code></pre>
 
-                <p>The <code>-savepwd</code> flag stores the password encrypted in the Oracle DBTools connection store at <code>~/.dbtools/connections/</code>. You will not be prompted for it again. For a full Connection Manager reference, see <a href="./sqlcl-connection-manager.html">article 003</a>.</p>
+                <p>The <code>-savepwd</code> flag stores the password encrypted in SQLcl's Oracle DBTools connection store under <code>~/.dbtools</code>. You will not be prompted for it again. For a full Connection Manager reference, see <a href="./sqlcl-connection-manager.html">article 003</a>.</p>
 
                 <hr class="major" />
-                <h2>8. Verify the 26ai Features Are Available</h2>
-                <p>Connect to your instance and run a few quick checks to confirm you have a working Oracle 26ai environment:</p>
+                <h2>8. Verify the AI and Vector Features Are Available</h2>
+                <p>Connect to your instance and run a few quick checks to confirm you have a working Oracle Database Free environment with the AI and vector features this series depends on:</p>
 
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>sql -name dev26ai
 
 -- Check database version
 SELECT banner FROM v$version;
 
--- Check vector memory configuration
-SELECT name, value FROM v$parameter WHERE name = 'vector_memory_size';
-
 -- VECTOR smoke test: should return a vector value without error
 SELECT VECTOR('[1.0, 2.0, 3.0]', 3, FLOAT32) FROM dual;</code></pre>
 
-                <p>Note: <code>SYSTEM</code> is used here for a quick connectivity check. For any ongoing development work, creating a dedicated schema user with least-privilege grants is recommended. If the <code>VECTOR</code> smoke test evaluates without error, your Oracle 26ai instance is up and ready for vector workloads.</p>
+                <p>Note: <code>SYSTEM</code> is used here for a quick connectivity check. For any ongoing development work, creating a dedicated schema user with least-privilege grants is recommended. If the <code>VECTOR</code> smoke test evaluates without error, your local Oracle Database Free instance is ready for the vector workflows used in the next article.</p>
 
                 <hr class="major" />
                 <h2>9. Day-to-Day Usage</h2>
@@ -195,7 +196,7 @@ docker volume rm oracle26ai-data</code></pre>
                 <p>Almost always a memory issue. Check that Colima was started with at least 4 GB (<code>colima status</code>) and that no other memory-heavy processes are competing. Run <code>docker logs oracle26ai</code> immediately after the exit to see the error.</p>
 
                 <h3>ORA-12541: No listener</h3>
-                <p>The database is still starting up. Wait for the "DATABASE IS READY TO USE!" log line before attempting to connect. If the message never appears, check <code>docker logs oracle26ai</code> for errors.</p>
+                <p>The database is still starting up. Wait until <code>docker ps --filter name=oracle26ai</code> shows the container as <code>(healthy)</code> before attempting to connect. The "DATABASE IS READY TO USE!" log line is a useful clue, but health status is the better final check. If the container never becomes healthy, inspect <code>docker logs oracle26ai</code>.</p>
 
                 <h3>Port 1521 already in use</h3>
                 <p>Another Oracle process or listener is already bound to port 1521 on your machine. Either stop the conflicting process or map the container to a different host port:</p>
@@ -208,10 +209,13 @@ conn -save dev26ai -savepwd system/YourStrongPassword@localhost:1522/FREEPDB1</c
                 <h3>Image pull fails with authentication error</h3>
                 <p>Make sure you have accepted the license on <a href="https://container-registry.oracle.com" target="_blank">container-registry.oracle.com</a> and that <code>docker login container-registry.oracle.com</code> completed successfully before pulling.</p>
 
+                <h3>Container starts but never becomes healthy</h3>
+                <p>Check <code>docker logs oracle26ai</code> first. On macOS, the usual causes are insufficient memory, an incompatible image architecture for the current Colima VM settings, or a partially initialised data volume. If you are on Apple Silicon and the current <code>:latest</code> image is amd64-only, restart Colima with <code>--vm-type=vz --vz-rosetta</code> and try again.</p>
+
                 <hr class="major" />
                 <h2>11. What's Next</h2>
-                <p>With a local Oracle 26ai instance running and connected via SQLcl Connection Manager, you have the foundation for everything else. The next article in this series builds directly on top of this setup: creating <code>VECTOR</code> columns, generating embeddings in Python, and running semantic similarity searches — all against your local database.</p>
-                <p><strong>If you followed along, you now have a full Oracle 26ai environment on your laptop — persistent, fast, and a single command away.</strong></p>
+                <p>With a local Oracle Database Free instance running and connected via SQLcl Connection Manager, you have the foundation for everything else. The next article in this series builds directly on top of this setup: creating <code>VECTOR</code> columns, generating embeddings in Python, and running semantic similarity searches — all against your local database.</p>
+                <p><strong>If you followed along, you now have a full Oracle Database Free environment on your laptop — persistent, fast, and a single command away.</strong></p>
 
                 <h3>References</h3>
                 <ul>
