@@ -22,7 +22,7 @@
             <section>
                 <header class="main">
                     <h1>006 — Oracle 26ai as Durable Memory for OpenClaw Agents</h1>
-                    <p>A local-first case study: using Oracle Database 26ai Free as the durable memory store for OpenClaw agents, while keeping OpenClaw's existing <code>memory_search</code> experience working.</p>
+                    <p>A local-first case study: using <strong>Oracle AI Database 26ai Free</strong> as the durable memory store for OpenClaw agents, while keeping OpenClaw's existing <code>memory_search</code> experience working. In the rest of the article I use the shorter phrase <strong>Oracle 26ai Free</strong>.</p>
                 </header>
                 <span class="image main"><img src="./static/assets/images/Image_w6.jpg" alt="" /></span>
 
@@ -30,7 +30,7 @@
                 <h2>1. The Problem: My Agent Needed a Memory That Survived</h2>
                 <p>When you start experimenting with coding agents, the first few sessions feel magical. The agent can inspect a repo, write code, run commands, and explain what it did. Then you come back the next day and hit the classic problem: the agent only knows what made it into its current context or into whatever memory files the environment already maintains.</p>
                 <p>For a small test environment, Markdown memory is often enough. It is simple, transparent, and easy to debug with <code>cat</code>, <code>grep</code>, and your editor. But I wanted one more thing: a durable memory store that behaved like application infrastructure, not just a pile of notes.</p>
-                <p>That led to this experiment: use <strong>Oracle Database 26ai Free</strong> as the durable memory store for OpenClaw agents, while keeping OpenClaw's existing <code>memory_search</code> experience working.</p>
+                <p>That led to this experiment: use <strong>Oracle AI Database 26ai Free</strong> (referred to here as Oracle 26ai Free for readability) as the durable memory store for OpenClaw agents, while keeping OpenClaw's existing <code>memory_search</code> experience working.</p>
                 <p>The important design decision was not to replace OpenClaw on day one. Instead, Oracle becomes the system of record, and a small compatibility layer mirrors memory entries back into Markdown so OpenClaw can still find them immediately.</p>
 
                 <p>We will build:</p>
@@ -71,7 +71,7 @@ Markdown mirror                  Oracle Text CONTAINS() over MEMORIES.CONTENT</c
 
                 <hr class="major" />
                 <h2>3. Why Oracle Here</h2>
-                <p>Oracle Database 26ai Free is a good fit for this local-first experiment because it gives the memory system a serious backend from the beginning:</p>
+                <p>Oracle 26ai Free is a good fit for this local-first experiment because it gives the memory system a serious backend from the beginning:</p>
                 <ul>
                     <li>durable writes</li>
                     <li>transactions and concurrency control</li>
@@ -119,7 +119,8 @@ session     -&gt; produced    -&gt; summary memory 88</code></pre>
 
                 <h3>Memory as an Event Log</h3>
                 <p>The current fact is important, but the change history is often just as important. If we simply edit a text file, we lose the story of what changed. With an event table, we can record that a memory was created, corrected, archived, merged, or superseded.</p>
-                <p>That is why the prototype already includes <code>MEMORY_EVENTS</code>. Later it can hold events such as:</p>
+                <p>That is why the prototype reserves a <code>MEMORY_EVENTS</code> table. In the first version, the important thing is that the schema has a place for the history. The next practical step is for <code>oc-mem-add</code> to insert a <code>created</code> event in the same transaction as the memory row.</p>
+                <p>Later it can hold events such as:</p>
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>created
 retrieved
 updated
@@ -147,6 +148,7 @@ order  by vector_distance(content_embedding, :query_embedding),
           created_at desc
 fetch  first 10 rows only;</code></pre>
                 <p>The vector is part of the same memory object — that avoids a lot of glue code and a lot of synchronization bugs.</p>
+                <p>This snippet is the future shape, not something the first helper already does. The database can store and query the vector, but the system still needs an embedding step that creates or refreshes <code>content_embedding</code> whenever a memory is written or changed.</p>
 
                 <hr class="major" />
                 <h2>5. Design Goals and Constraints</h2>
@@ -167,7 +169,7 @@ Markdown mirror  = OpenClaw compatibility layer</code></pre>
                 <p>You need:</p>
                 <ul>
                     <li>Oracle Database 26ai Free running locally as a CDB (see <a href="./oracle-26ai-docker.html">article 004</a>)</li>
-                    <li>SQLcl installed, ideally a recent 26.x version</li>
+                    <li>SQLcl installed, ideally a recent version. If you want MCP mode, use a SQLcl version that includes SQLcl MCP support.</li>
                     <li>a SYSDBA connection profile configured in SQLcl, so you can run <code>sql -name &lt;your_sys_profile&gt;</code></li>
                 </ul>
                 <p>Optional: SQLcl MCP mode, if you want to expose Oracle operations through MCP tooling. Keep the configuration sanitized in articles, docs, and examples:</p>
@@ -185,7 +187,9 @@ Markdown mirror  = OpenClaw compatibility layer</code></pre>
 
                 <hr class="major" />
                 <h2>7. Step 1 — Create a Dedicated PDB</h2>
-                <p>The first choice is isolation. A dedicated PDB makes the experiment easier to reason about, easier to drop, and easier to back up. Connect as SYS using your SQLcl profile and create the PDB:</p>
+                <p>The first choice is isolation. A dedicated PDB makes the experiment easier to reason about, easier to drop, and easier to back up.</p>
+                <p>Oracle Free installations usually already include a default PDB such as <code>FREEPDB1</code>. For a quick throwaway demo, you could create the <code>CLAW</code> schema there. This article uses a separate <code>OPENCLAW</code> PDB because isolation makes the experiment easier to drop, back up, and reason about.</p>
+                <p>Connect as SYS using your SQLcl profile and create the PDB:</p>
 <pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Run in CDB$ROOT
 create pluggable database OPENCLAW
   admin user PDBADMIN identified by "&lt;strong-password&gt;"
@@ -291,6 +295,15 @@ insert into AGENTS(agent_id, display_name)
 values ('main', 'OpenClaw main agent');
 commit;</code></pre>
 
+                <p>One small prototype detail: <code>updated_at default systimestamp</code> gives each new row an initial update time, but it does not update itself later. In this version, update helpers should explicitly set <code>updated_at = systimestamp</code>. If direct SQL updates become common, add a small <code>before update</code> trigger:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>create or replace trigger MEMORIES_SET_UPDATED_AT
+before update on MEMORIES
+for each row
+begin
+  :new.updated_at := systimestamp;
+end;
+/</code></pre>
+
                 <p>This schema is intentionally small, but it already gives us useful handles:</p>
                 <ul>
                     <li><code>scope</code> can separate user memory, project memory, system memory, or team memory.</li>
@@ -312,7 +325,7 @@ select memory_id, title
 from   memories
 where  contains(content, 'oracle') &gt; 0
 order  by memory_id desc;</code></pre>
-                <p>For a local test environment, <code>sync (on commit)</code> is convenient because a memory becomes searchable right after the helper script commits it. For heavier write volume, you would revisit the indexing strategy and maintenance settings.</p>
+                <p>For a local test environment, <code>sync (on commit)</code> is convenient because a memory becomes searchable right after the helper script commits it. That is useful for a tutorial because the feedback loop is deterministic. For heavier write volume, test Oracle Text automatic maintenance or scheduled synchronization instead of paying the indexing cost on every commit.</p>
 
                 <hr class="major" />
                 <h2>11. Step 5 — Wire It Into OpenClaw Without Replacing It</h2>
@@ -383,6 +396,10 @@ the durable memory source; Markdown is the OpenClaw compatibility mirror.</code>
                     </div>
                 </div>
 
+                <blockquote>
+                    <strong>Safety note on <code>--q</code>:</strong> in this prototype, <code>--q</code> is passed to Oracle Text. That is powerful, but it also means the input follows Oracle Text query syntax rather than being a simple plain-text substring. For a real helper, either document that clearly or escape/normalize user text before passing it to <code>CONTAINS()</code>.
+                </blockquote>
+
                 <hr class="major" />
                 <h2>13. Implementation Notes — What Bit Us</h2>
 
@@ -400,6 +417,9 @@ the durable memory source; Markdown is the OpenClaw compatibility mirror.</code>
 
                 <h3>3. Keep the Markdown mirror disposable</h3>
                 <p>The mirror is for compatibility. Treat it as a generated artifact — do not put secrets in it, do not manually edit it, keep the format stable enough for search, and keep the database row as the authority. If the Markdown mirror is deleted, you should be able to regenerate it from Oracle.</p>
+                <blockquote>
+                    The mirror is generated output. If Oracle and Markdown ever disagree, trust Oracle and regenerate the Markdown file from the database.
+                </blockquote>
 
                 <h3>4. Store uncertainty instead of hiding it</h3>
                 <p>The <code>confidence</code> column may look unnecessary in a prototype, but it is valuable once agents start summarizing or extracting memories automatically. Direct user preferences can be high confidence; inferences from a conversation should not be stored with the same confidence. A memory system that can represent uncertainty is easier to maintain than one that pretends every extracted fact is equally true.</p>
@@ -493,8 +513,12 @@ order  by memory_id desc;</code></pre>
 
                 <h3>References</h3>
                 <ul>
-                    <li>Oracle Database 26ai — SQL Property Graphs. <a href="https://docs.oracle.com/en/database/oracle/property-graph/26.1/spgdg/sql-property-graphs.html" target="_blank">docs.oracle.com</a></li>
-                    <li>Oracle AI Vector Search — Overview. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/26/vecse/overview-ai-vector-search.html" target="_blank">docs.oracle.com</a></li>
+                    <li>Oracle AI Database 26ai documentation. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/26/index.html" target="_blank">docs.oracle.com</a></li>
+                    <li>Oracle Text Reference 26ai. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/26/ccref/index.html" target="_blank">docs.oracle.com</a></li>
+                    <li>Oracle Text <code>CONTEXT</code> indexes and <code>CONTAINS()</code>. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/ccapp/oracle-text-indexes.html" target="_blank">docs.oracle.com</a></li>
+                    <li>Oracle Text automatic maintenance. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/23/ccapp/using-automatic-maintenance-index.html" target="_blank">docs.oracle.com</a></li>
+                    <li>Oracle SQL property graphs. <a href="https://docs.oracle.com/en/database/oracle/property-graph/26.1/spgdg/sql-property-graphs.html" target="_blank">docs.oracle.com</a></li>
+                    <li>Oracle AI Vector Search overview. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/26/vecse/overview-ai-vector-search.html" target="_blank">docs.oracle.com</a></li>
                     <li>Article 004 — Oracle 26ai Free on Docker. <a href="./oracle-26ai-docker.html">oracle-26ai-docker.html</a></li>
                     <li>Article 005 — Vector Search in Python. <a href="./oracle-vector-search-python.html">oracle-vector-search-python.html</a></li>
                 </ul>
