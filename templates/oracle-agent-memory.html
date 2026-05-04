@@ -52,7 +52,7 @@
       v
 bin/oc-mem-add
       |
-      +--&gt; Oracle Database 26ai Free
+      +--&gt; Oracle AI Database 26ai Free
       |       AGENTS
       |       SESSIONS
       |       MEMORIES
@@ -168,7 +168,7 @@ Markdown mirror  = OpenClaw compatibility layer</code></pre>
                 <h2>6. Prerequisites</h2>
                 <p>You need:</p>
                 <ul>
-                    <li>Oracle Database 26ai Free running locally as a CDB (see <a href="./oracle-26ai-docker.html">article 004</a>)</li>
+                    <li>Oracle AI Database 26ai Free running locally as a CDB (see <a href="./oracle-26ai-docker.html">article 004</a>)</li>
                     <li>SQLcl installed, ideally a recent version. If you want MCP mode, use a SQLcl version that includes SQLcl MCP support.</li>
                     <li>a SYSDBA connection profile configured in SQLcl, so you can run <code>sql -name &lt;your_sys_profile&gt;</code></li>
                 </ul>
@@ -239,7 +239,7 @@ grant db_developer_role to CLAW;</code></pre>
                         </thead>
                         <tbody>
                             <tr><td><code>AGENTS</code></td><td>One row per agent identity.</td></tr>
-                            <tr><td><code>SESSIONS</code></td><td>Optional session tracking — useful when memory comes from a chat or task run.</td></tr>
+                            <tr><td><code>SESSIONS</code></td><td>Optional session tracking - useful when memory comes from a chat or task run.</td></tr>
                             <tr><td><code>MEMORIES</code></td><td>The main durable memory table.</td></tr>
                             <tr><td><code>MEMORY_EVENTS</code></td><td>Audit-style events around memory creation, updates, merges, or archival.</td></tr>
                         </tbody>
