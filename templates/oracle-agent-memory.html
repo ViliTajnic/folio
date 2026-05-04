@@ -1,0 +1,551 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>006 — Oracle 26ai as Durable Memory for OpenClaw — Vili Tajnic</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="./static/assets/css/main.css" />
+    <link rel="icon" type="image/x-icon" href="./static/favicon.ico" />
+</head>
+<body class="is-preload">
+<div id="wrapper">
+    <div id="main">
+        <div class="inner">
+            <header id="header">
+                <a href="./index.html" class="logo"><strong>Vili Tajnic</strong> — Oracle &amp; Python Engineer</a>
+                <ul class="icons">
+                    <li><a href="https://twitter.com/vilita" class="icon brands fa-twitter" target="_blank"><span class="label">Twitter</span></a></li>
+                    <li><a href="https://www.linkedin.com/in/vilit/" class="icon brands fa-linkedin" target="_blank"><span class="label">LinkedIn</span></a></li>
+                    <li><a href="https://github.com/ViliTajnic" class="icon brands fa-github" target="_blank"><span class="label">GitHub</span></a></li>
+                </ul>
+            </header>
+            <section>
+                <header class="main">
+                    <h1>006 — Oracle 26ai as Durable Memory for OpenClaw Agents</h1>
+                    <p>A local-first case study: using Oracle Database 26ai Free as the durable memory store for OpenClaw agents, while keeping OpenClaw's existing <code>memory_search</code> experience working.</p>
+                </header>
+                <span class="image main"><img src="./static/assets/images/Image_w6.jpg" alt="" /></span>
+
+                <hr class="major" />
+                <h2>1. The Problem: My Agent Needed a Memory That Survived</h2>
+                <p>When you start experimenting with coding agents, the first few sessions feel magical. The agent can inspect a repo, write code, run commands, and explain what it did. Then you come back the next day and hit the classic problem: the agent only knows what made it into its current context or into whatever memory files the environment already maintains.</p>
+                <p>For a small test environment, Markdown memory is often enough. It is simple, transparent, and easy to debug with <code>cat</code>, <code>grep</code>, and your editor. But I wanted one more thing: a durable memory store that behaved like application infrastructure, not just a pile of notes.</p>
+                <p>That led to this experiment: use <strong>Oracle Database 26ai Free</strong> as the durable memory store for OpenClaw agents, while keeping OpenClaw's existing <code>memory_search</code> experience working.</p>
+                <p>The important design decision was not to replace OpenClaw on day one. Instead, Oracle becomes the system of record, and a small compatibility layer mirrors memory entries back into Markdown so OpenClaw can still find them immediately.</p>
+
+                <p>We will build:</p>
+                <ul>
+                    <li>a dedicated <strong>PDB</strong> (<code>OPENCLAW</code>)</li>
+                    <li>a dedicated <strong>tablespace</strong> (<code>OPENCLAW</code>)</li>
+                    <li>a single <strong>schema owner</strong> used by all agents (<code>CLAW</code>)</li>
+                    <li>a minimal memory schema (<code>AGENTS</code>, <code>SESSIONS</code>, <code>MEMORIES</code>, <code>MEMORY_EVENTS</code>)</li>
+                    <li>a simple full-text search index for keyword lookup with Oracle Text</li>
+                    <li>two helper CLIs: <code>oc-mem-add</code> for writing memory and <code>oc-mem-search</code> for retrieving memory</li>
+                </ul>
+                <p>And we will make it feel automatic in OpenClaw by mirroring durable memories into Markdown files such as <code>memory/YYYY-MM-DD.md</code>. The agent can keep using the built-in memory tools while the database quietly becomes the durable source underneath.</p>
+
+                <hr class="major" />
+                <h2>2. The Shape of the Solution</h2>
+                <p>The whole experiment can be summarized like this:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>Developer or agent
+      |
+      v
+bin/oc-mem-add
+      |
+      +--&gt; Oracle Database 26ai Free
+      |       AGENTS
+      |       SESSIONS
+      |       MEMORIES
+      |       MEMORY_EVENTS
+      |
+      +--&gt; memory/YYYY-MM-DD.md
+              OpenClaw memory_search can index this immediately</code></pre>
+
+                <p>For reads there are two paths:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>OpenClaw memory_search           bin/oc-mem-search
+      |                                |
+      v                                v
+Markdown mirror                  Oracle Text CONTAINS() over MEMORIES.CONTENT</code></pre>
+
+                <p>This is intentionally boring. Boring is good for agent memory. You want every write to be inspectable. You want every row to have a timestamp. You want to know which agent wrote it, what kind of memory it is, and whether it came from a preference, a fact, a summary, or a tool result.</p>
+
+                <hr class="major" />
+                <h2>3. Why Oracle Here</h2>
+                <p>Oracle Database 26ai Free is a good fit for this local-first experiment because it gives the memory system a serious backend from the beginning:</p>
+                <ul>
+                    <li>durable writes</li>
+                    <li>transactions and concurrency control</li>
+                    <li>a relational schema for long-term memory objects</li>
+                    <li>native JSON columns for tags, metadata, and provenance</li>
+                    <li>Oracle Text for keyword search</li>
+                    <li>a path toward vector search and hybrid retrieval later</li>
+                </ul>
+                <p>Agent memory usually starts simple and then grows in two directions at once. On one side, the data becomes more structured — you want to know whether a memory belongs to a user, a project, a session, or a specific agent, plus importance, confidence, source, tags, and timestamps. On the other side, retrieval becomes more interesting — keyword search is useful, but eventually you also want semantic search, ranking, deduplication, summarization, and retention policies.</p>
+                <p>A database gives you a stable place to evolve those ideas without constantly changing the agent-facing workflow.</p>
+
+                <hr class="major" />
+                <h2>4. Memory Wants to Become Graph, Log, and Search</h2>
+                <blockquote>
+                    Where Oracle shines is if you want memory to become more like a <strong>knowledge graph + event log + vector search system</strong> instead of just text files.
+                </blockquote>
+                <p>That sounds abstract, but for programmers it becomes concrete very quickly. A Markdown file is excellent for a human-readable note — it answers "What did we write down?" But once agent memory becomes part of a real workflow, the interesting questions are no longer only text questions:</p>
+                <ul>
+                    <li>Which agent learned this?</li>
+                    <li>Which session or task produced it?</li>
+                    <li>Is this a user preference, a project fact, a decision, or a temporary observation?</li>
+                    <li>Which memory supersedes an older one?</li>
+                    <li>Which memories are connected to the same project, repo, feature, customer, or incident?</li>
+                    <li>What did the agent believe before it changed its answer?</li>
+                    <li>Which memories are important enough to retrieve first?</li>
+                </ul>
+
+                <h3>Memory as a Knowledge Graph</h3>
+                <p>A useful agent memory is not just a list of paragraphs. It is a web of things and relationships:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>user        -&gt; prefers     -&gt; Oracle-first local infrastructure
+project     -&gt; uses        -&gt; OpenClaw
+agent       -&gt; wrote       -&gt; memory 42
+memory 51   -&gt; supersedes  -&gt; memory 17
+session     -&gt; produced    -&gt; summary memory 88</code></pre>
+                <p>A future extension could look like this:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>create table MEMORY_LINKS (
+  from_memory_id number references MEMORIES(memory_id),
+  to_memory_id   number references MEMORIES(memory_id),
+  relation       varchar2(64) not null,
+  created_at     timestamp default systimestamp not null,
+  metadata       json,
+  primary key (from_memory_id, to_memory_id, relation)
+);</code></pre>
+                <p>You can start with normal tables and SQL, and then move toward property-graph-style thinking without throwing the first version away. Oracle AI Database 26ai includes <a href="https://docs.oracle.com/en/database/oracle/property-graph/26.1/spgdg/sql-property-graphs.html" target="_blank">SQL property graph capabilities</a>, so this is not a separate architectural island.</p>
+
+                <h3>Memory as an Event Log</h3>
+                <p>The current fact is important, but the change history is often just as important. If we simply edit a text file, we lose the story of what changed. With an event table, we can record that a memory was created, corrected, archived, merged, or superseded.</p>
+                <p>That is why the prototype already includes <code>MEMORY_EVENTS</code>. Later it can hold events such as:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>created
+retrieved
+updated
+archived
+superseded
+summarized_from_session
+merged_with_duplicate
+confidence_lowered</code></pre>
+                <p>This turns memory into an audit trail. A durable event log lets you answer: "Why does the agent believe this?" instead of only "What does the agent believe now?"</p>
+
+                <h3>Memory as Vector Search</h3>
+                <p>Keyword search is the first useful retrieval layer. But a user may ask about "persistent agent state" while the stored memory says "durable OpenClaw memory." Those phrases are related, but they do not share enough words for plain keyword search to be reliable.</p>
+                <p>That is where vector search becomes useful. Oracle AI Vector Search provides a <a href="https://docs.oracle.com/en/database/oracle/oracle-database/26/vecse/overview-ai-vector-search.html" target="_blank">VECTOR data type</a> and SQL functions such as <code>VECTOR_DISTANCE</code>. The important part is that the vector lives beside the rest of the memory record:</p>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Future shape, once an embedding column exists.
+alter table MEMORIES add content_embedding vector;
+
+select memory_id, title, content
+from   memories
+where  agent_id = :agent_id
+  and  scope in ('user', 'project')
+  and  archived_at is null
+order  by vector_distance(content_embedding, :query_embedding),
+          importance desc,
+          created_at desc
+fetch  first 10 rows only;</code></pre>
+                <p>The vector is part of the same memory object — that avoids a lot of glue code and a lot of synchronization bugs.</p>
+
+                <hr class="major" />
+                <h2>5. Design Goals and Constraints</h2>
+                <p>The goals were deliberately small:</p>
+                <ul>
+                    <li>Durable memory lives in Oracle.</li>
+                    <li>All agents share the same database user (<code>CLAW</code>) — this is a single-user test system.</li>
+                    <li>No secrets are stored in git.</li>
+                    <li>No passwords are printed in blog snippets.</li>
+                    <li>OpenClaw memory search keeps working without a custom backend.</li>
+                </ul>
+                <p>The main constraint is OpenClaw's existing memory model. OpenClaw indexes Markdown files (<code>MEMORY.md</code>, <code>memory/*.md</code>, and nested files under <code>memory/</code>). A full Oracle-backed OpenClaw memory provider would be cleaner long term, but it is a bigger integration project. For this experiment, the pragmatic solution is:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>Oracle           = durable source of truth
+Markdown mirror  = OpenClaw compatibility layer</code></pre>
+
+                <hr class="major" />
+                <h2>6. Prerequisites</h2>
+                <p>You need:</p>
+                <ul>
+                    <li>Oracle Database 26ai Free running locally as a CDB (see <a href="./oracle-26ai-docker.html">article 004</a>)</li>
+                    <li>SQLcl installed, ideally a recent 26.x version</li>
+                    <li>a SYSDBA connection profile configured in SQLcl, so you can run <code>sql -name &lt;your_sys_profile&gt;</code></li>
+                </ul>
+                <p>Optional: SQLcl MCP mode, if you want to expose Oracle operations through MCP tooling. Keep the configuration sanitized in articles, docs, and examples:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>{
+  "mcpServers": {
+    "oracle-sqlcl": {
+      "command": "${SQLCL_HOME}/bin/sql",
+      "args": ["-mcp"],
+      "env": {
+        "JAVA_HOME": "${JAVA_HOME}"
+      }
+    }
+  }
+}</code></pre>
+
+                <hr class="major" />
+                <h2>7. Step 1 — Create a Dedicated PDB</h2>
+                <p>The first choice is isolation. A dedicated PDB makes the experiment easier to reason about, easier to drop, and easier to back up. Connect as SYS using your SQLcl profile and create the PDB:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Run in CDB$ROOT
+create pluggable database OPENCLAW
+  admin user PDBADMIN identified by "&lt;strong-password&gt;"
+  file_name_convert = (
+    '&lt;seed-path&gt;/', '&lt;data-path&gt;/OPENCLAW/',
+    '&lt;SEED-PATH&gt;/', '&lt;data-path&gt;/OPENCLAW/'
+  );
+
+alter pluggable database OPENCLAW open;
+alter pluggable database OPENCLAW save state;</code></pre>
+                <blockquote>
+                    <code>file_name_convert</code> is environment-specific; use whatever matches your Oracle Free layout. <code>save state</code> ensures the PDB reopens on restart.
+                </blockquote>
+
+                <hr class="major" />
+                <h2>8. Step 2 — Create the Tablespace and Schema Owner</h2>
+                <p>Switch into the PDB and create a dedicated tablespace and one schema owner for the memory tables:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>alter session set container = OPENCLAW;
+
+create tablespace OPENCLAW
+  datafile '&lt;data-path&gt;/OPENCLAW/openclaw01.dbf'
+  size 256m
+  autoextend on next 128m maxsize 4096m;
+
+create user CLAW identified by "&lt;strong-password&gt;"
+  default tablespace OPENCLAW
+  temporary tablespace TEMP
+  quota unlimited on OPENCLAW;
+
+grant create session to CLAW;
+grant db_developer_role to CLAW;</code></pre>
+
+                <p>The mental model is simple:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>OPENCLAW PDB
+  OPENCLAW tablespace
+    CLAW schema
+      memory tables</code></pre>
+
+                <hr class="major" />
+                <h2>9. Step 3 — Create the Minimal Durable-Memory Schema</h2>
+                <p>Connect as <code>CLAW</code> and create the four tables:</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>Table</th><th>Purpose</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>AGENTS</code></td><td>One row per agent identity.</td></tr>
+                            <tr><td><code>SESSIONS</code></td><td>Optional session tracking — useful when memory comes from a chat or task run.</td></tr>
+                            <tr><td><code>MEMORIES</code></td><td>The main durable memory table.</td></tr>
+                            <tr><td><code>MEMORY_EVENTS</code></td><td>Audit-style events around memory creation, updates, merges, or archival.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>create table AGENTS (
+  agent_id       varchar2(128) primary key,
+  display_name   varchar2(256),
+  created_at     timestamp default systimestamp not null,
+  metadata       json
+);
+
+create table SESSIONS (
+  session_id     varchar2(256) primary key,
+  agent_id       varchar2(128) references AGENTS(agent_id),
+  channel        varchar2(128),
+  created_at     timestamp default systimestamp not null,
+  last_seen_at   timestamp,
+  metadata       json
+);
+
+create table MEMORIES (
+  memory_id      number generated always as identity primary key,
+  agent_id       varchar2(128) references AGENTS(agent_id),
+  session_id     varchar2(256),
+  scope          varchar2(64) default 'user' not null,
+  kind           varchar2(64) default 'fact' not null,
+  title          varchar2(512),
+  content        clob not null,
+  importance     number(3) default 50 check (importance between 0 and 100),
+  confidence     number(5,4) default 1 check (confidence between 0 and 1),
+  source         varchar2(512),
+  tags           json,
+  metadata       json,
+  created_at     timestamp default systimestamp not null,
+  updated_at     timestamp default systimestamp not null,
+  archived_at    timestamp
+);
+
+create table MEMORY_EVENTS (
+  event_id       number generated always as identity primary key,
+  memory_id      number references MEMORIES(memory_id),
+  event_type     varchar2(64) not null,
+  actor_agent_id varchar2(128),
+  payload        json,
+  created_at     timestamp default systimestamp not null
+);
+
+create index MEMORIES_AGENT_SCOPE_IX on MEMORIES(agent_id, scope, archived_at);
+
+insert into AGENTS(agent_id, display_name)
+values ('main', 'OpenClaw main agent');
+commit;</code></pre>
+
+                <p>This schema is intentionally small, but it already gives us useful handles:</p>
+                <ul>
+                    <li><code>scope</code> can separate user memory, project memory, system memory, or team memory.</li>
+                    <li><code>kind</code> can distinguish facts, preferences, summaries, decisions, and instructions.</li>
+                    <li><code>importance</code> gives future ranking logic a starting point.</li>
+                    <li><code>confidence</code> lets the agent store uncertainty instead of pretending every memory is perfect.</li>
+                    <li><code>tags</code> and <code>metadata</code> keep the core table flexible without turning every experiment into a migration.</li>
+                    <li><code>archived_at</code> lets us hide old or superseded memories without deleting them immediately.</li>
+                </ul>
+
+                <hr class="major" />
+                <h2>10. Step 4 — Add Keyword Search with Oracle Text</h2>
+                <p>For predictable <code>CONTAINS()</code> behavior, use a classic Oracle Text <code>CONTEXT</code> index over the <code>content</code> column:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>create index MEMORIES_CONTENT_CTX on MEMORIES(content)
+  indextype is ctxsys.context
+  parameters ('sync (on commit)');
+
+select memory_id, title
+from   memories
+where  contains(content, 'oracle') &gt; 0
+order  by memory_id desc;</code></pre>
+                <p>For a local test environment, <code>sync (on commit)</code> is convenient because a memory becomes searchable right after the helper script commits it. For heavier write volume, you would revisit the indexing strategy and maintenance settings.</p>
+
+                <hr class="major" />
+                <h2>11. Step 5 — Wire It Into OpenClaw Without Replacing It</h2>
+                <p>OpenClaw already knows how to index memory Markdown files. That is the feature we reuse. The helper script does two writes:</p>
+                <ol>
+                    <li>insert the memory into Oracle</li>
+                    <li>append a readable entry to <code>memory/YYYY-MM-DD.md</code></li>
+                </ol>
+                <p>That makes Oracle durable and OpenClaw compatible at the same time.</p>
+
+                <h3>Local secret file</h3>
+                <p>Create <code>secrets/openclaw_oracle.env</code> (do not commit this file):</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>export OPENCLAW_ORACLE_CONNECT='claw/&lt;password&gt;@localhost:1521/OPENCLAW'</code></pre>
+
+                <h3>Helper scripts</h3>
+                <p>The repository has two small command-line helpers — <code>bin/oc-mem-add</code> writes to Oracle and mirrors to Markdown, while <code>bin/oc-mem-search</code> searches Oracle via <code>CONTAINS()</code>. Example usage:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>source secrets/openclaw_oracle.env
+
+./bin/oc-mem-add \
+  --agent main \
+  --scope user \
+  --kind preference \
+  --title "DB preference" \
+  --content "Single-user system: all agents share the CLAW schema. Oracle is the durable memory source; Markdown is the OpenClaw compatibility mirror." \
+  --tags-json '["preference","oracle","openclaw","memory"]'
+
+./bin/oc-mem-search --q "Oracle durable memory" --limit 5</code></pre>
+
+                <p>The Markdown mirror should be plain enough that a human can read it and a search index can chunk it:</p>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>## 2026-05-04 10:15:32 - DB preference
+
+- memory_id: 42
+- agent: main
+- scope: user
+- kind: preference
+- tags: preference, oracle, openclaw, memory
+
+Single-user system: all agents share the CLAW schema. Oracle is
+the durable memory source; Markdown is the OpenClaw compatibility mirror.</code></pre>
+
+                <hr class="major" />
+                <h2>12. Helper Script Behavior</h2>
+
+                <div class="row">
+                    <div class="col-6 col-12-small">
+                        <h3>How <code>oc-mem-add</code> should behave</h3>
+                        <ol>
+                            <li>read <code>OPENCLAW_ORACLE_CONNECT</code> from the environment</li>
+                            <li>validate required arguments (<code>--agent</code>, <code>--title</code>, <code>--content</code>)</li>
+                            <li>pass values into SQLcl using binds</li>
+                            <li>run <code>oracle/mem_add.sql</code></li>
+                            <li>capture the new <code>memory_id</code></li>
+                            <li>append a Markdown entry to <code>memory/YYYY-MM-DD.md</code></li>
+                            <li>print a small success message</li>
+                        </ol>
+                        <p>If the Oracle insert fails, the helper should not append the Markdown mirror. Oracle is the source of truth — the mirror should only reflect committed database writes.</p>
+                    </div>
+                    <div class="col-6 col-12-small">
+                        <h3>How <code>oc-mem-search</code> should behave</h3>
+                        <ol>
+                            <li>read <code>OPENCLAW_ORACLE_CONNECT</code> from the environment</li>
+                            <li>accept a search query with <code>--q</code></li>
+                            <li>apply a sensible default limit</li>
+                            <li>run <code>oracle/mem_search.sql</code></li>
+                            <li>print compact results that include <code>memory_id</code>, <code>title</code>, <code>created_at</code>, and a short content preview</li>
+                        </ol>
+                        <p>During development, this is very useful because you can answer: did the write reach Oracle? Did the text index pick it up? Is the memory archived? Did the Markdown mirror contain the same content?</p>
+                    </div>
+                </div>
+
+                <hr class="major" />
+                <h2>13. Implementation Notes — What Bit Us</h2>
+
+                <h3>1. SQLcl, JSON columns, and naive SQL can surprise you</h3>
+                <p>When inserting into <code>JSON</code> columns, avoid clever SQL wrappers that make the statement harder to bind and debug. What worked reliably:</p>
+                <ul>
+                    <li>bind JSON strings into <code>:tags_json</code> and <code>:meta_json</code></li>
+                    <li>insert them directly into JSON-typed columns in PL/SQL</li>
+                    <li>use <code>RETURNING ... INTO</code> to get the new <code>memory_id</code></li>
+                </ul>
+                <p>The boring version is easier to troubleshoot. That matters when the caller is not always a human — agents are very good at calling tools repeatedly, so the tool should fail clearly and predictably.</p>
+
+                <h3>2. Prefer a <code>CONTEXT</code> index for <code>CONTAINS()</code></h3>
+                <p>Oracle has multiple text and search options. For this first version, the goal is not to design the perfect retrieval stack — the goal is to make keyword lookup reliable. For standard <code>CONTAINS()</code> text behavior, a <code>CONTEXT</code> index is the simple choice.</p>
+
+                <h3>3. Keep the Markdown mirror disposable</h3>
+                <p>The mirror is for compatibility. Treat it as a generated artifact — do not put secrets in it, do not manually edit it, keep the format stable enough for search, and keep the database row as the authority. If the Markdown mirror is deleted, you should be able to regenerate it from Oracle.</p>
+
+                <h3>4. Store uncertainty instead of hiding it</h3>
+                <p>The <code>confidence</code> column may look unnecessary in a prototype, but it is valuable once agents start summarizing or extracting memories automatically. Direct user preferences can be high confidence; inferences from a conversation should not be stored with the same confidence. A memory system that can represent uncertainty is easier to maintain than one that pretends every extracted fact is equally true.</p>
+
+                <hr class="major" />
+                <h2>14. Repo Layout</h2>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>workspace/
+├── secrets/
+│   └── openclaw_oracle.env        # local only
+├── oracle/
+│   ├── mem_add.sql
+│   └── mem_search.sql
+├── bin/
+│   ├── oc-mem-add
+│   └── oc-mem-search
+├── memory/
+│   └── YYYY-MM-DD.md              # auto-mirrored entries for OpenClaw recall
+└── docs/
+    └── oracle-agent-memory.md     # this article</code></pre>
+                <p>That separation keeps the experiment easy to explain: SQL files know about Oracle, helper scripts know about the workspace, OpenClaw keeps reading Markdown.</p>
+
+                <hr class="major" />
+                <h2>15. Next Steps — Use More of the Database</h2>
+
+                <div class="row">
+                    <div class="col-4 col-12-small">
+                        <h3>Add vector search</h3>
+                        <p>Store embeddings next to the memory row, then query by semantic similarity. Combine structured filters (<code>agent_id</code>, <code>scope</code>, <code>kind</code>, <code>archived_at</code>), keyword search over <code>content</code>, vector similarity over embeddings, and ranking based on importance, confidence, and recency.</p>
+                    </div>
+                    <div class="col-4 col-12-small">
+                        <h3>Real OpenClaw provider</h3>
+                        <p>The Markdown mirror is a good compatibility layer, but not the end state. A deeper integration would let OpenClaw query Oracle directly — Oracle becomes both the durable store and the retrieval engine. The mirror can remain useful as an export/debug format.</p>
+                    </div>
+                    <div class="col-4 col-12-small">
+                        <h3>Retention &amp; summarization</h3>
+                        <p>Raw memory grows quickly. A lifecycle pipeline turns episodic chat logs into extracted candidate memories, then summarized semantic memories, then curated long-term memory, then archived or superseded old rows.</p>
+                    </div>
+                </div>
+
+                <hr class="major" />
+                <h2>16. Operational Safety Checklist</h2>
+                <p>Before letting agents write to durable storage, keep a few rules in place:</p>
+                <ul>
+                    <li>Keep credentials out of git.</li>
+                    <li>Keep credentials out of blog snippets.</li>
+                    <li>Use a dedicated PDB or at least a dedicated schema.</li>
+                    <li>Start permissive for prototyping, then tighten roles and grants.</li>
+                    <li>Treat generated Markdown as public within the workspace.</li>
+                    <li>Log memory writes clearly enough that a human can audit them.</li>
+                    <li>Prefer archiving over deleting while the system is still young.</li>
+                    <li>Make it easy to export or regenerate the Markdown mirror from Oracle.</li>
+                </ul>
+                <blockquote>
+                    Agent memory is not just a feature. It is state. Once a system has durable state, debugging and safety become part of the design.
+                </blockquote>
+
+                <hr class="major" />
+                <h2>17. Quick Verification Queries</h2>
+<pre style="background:#1e293b;color:#e2e8f0;padding:1.25rem 1.5rem;border-radius:6px;overflow-x:auto;font-size:0.95rem;line-height:1.6;margin:1rem 0;"><code>-- Confirm user and PDB
+select sys_context('USERENV','SESSION_USER') as user_name,
+       sys_context('USERENV','CON_NAME')     as con_name
+from   dual;
+
+-- Are memories being written?
+select count(*) as memories_total, max(memory_id) as max_id
+from   memories;
+
+-- Latest memory rows
+select memory_id, agent_id, scope, kind, title, created_at
+from   memories
+where  archived_at is null
+order  by memory_id desc
+fetch  first 10 rows only;
+
+-- Oracle Text index status
+select index_name, status
+from   user_indexes
+where  index_name = 'MEMORIES_CONTENT_CTX';
+
+-- Simple text search
+select memory_id, title
+from   memories
+where  contains(content, 'oracle') &gt; 0
+order  by memory_id desc;</code></pre>
+
+                <hr class="major" />
+                <h2>18. Closing Thought</h2>
+                <p>The useful part of this experiment is not that the schema is perfect. It is not. The useful part is the <strong>pattern</strong>.</p>
+                <p>Start with the memory flow your agent already understands. Add a durable database behind it. Keep the compatibility layer simple. Make every write observable. Then improve retrieval step by step.</p>
+                <p>For a programmer, that is a comfortable path: one small tool, one table design, one working feedback loop at a time.</p>
+
+                <h3>References</h3>
+                <ul>
+                    <li>Oracle Database 26ai — SQL Property Graphs. <a href="https://docs.oracle.com/en/database/oracle/property-graph/26.1/spgdg/sql-property-graphs.html" target="_blank">docs.oracle.com</a></li>
+                    <li>Oracle AI Vector Search — Overview. <a href="https://docs.oracle.com/en/database/oracle/oracle-database/26/vecse/overview-ai-vector-search.html" target="_blank">docs.oracle.com</a></li>
+                    <li>Article 004 — Oracle 26ai Free on Docker. <a href="./oracle-26ai-docker.html">oracle-26ai-docker.html</a></li>
+                    <li>Article 005 — Vector Search in Python. <a href="./oracle-vector-search-python.html">oracle-vector-search-python.html</a></li>
+                </ul>
+
+                <ul class="actions">
+                    <li><a href="./oracle-vector-search-python.html" class="button">&larr; Previous Article</a></li>
+                    <li><a href="./works.html" class="button">All Articles</a></li>
+                </ul>
+            </section>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <div class="inner">
+            <nav id="menu">
+                <header class="major"><h2>Menu</h2></header>
+                <ul>
+                    <li><a href="./index.html">Home</a></li>
+                    <li><a href="./about.html">About Me</a></li>
+                    <li>
+                        <span class="opener">Articles</span>
+                        <ul>
+                            <li><a href="./works.html">All Articles</a></li>
+                            <li><a href="./work.html">001 — Password Checker</a></li>
+                            <li><a href="./oci-autonomous-terraform.html">002 — OCI Terraform</a></li>
+                            <li><a href="./sqlcl-connection-manager.html">003 — SQLcl CM Article</a></li>
+                            <li><a href="./oracle-26ai-docker.html">004 — Oracle 26ai on Docker</a></li>
+                            <li><a href="./oracle-vector-search-python.html">005 — Vector Search in Python</a></li>
+                            <li><a href="./oracle-agent-memory.html">006 — Agent Memory in Oracle</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="./contact.html">Contact</a></li>
+                </ul>
+            </nav>
+            <section>
+                <header class="major"><h2>Get in touch</h2></header>
+                <ul class="contact">
+                    <li class="icon solid fa-envelope"><a href="mailto:vili.tajnic@gmail.com">vili.tajnic@gmail.com</a></li>
+                    <li class="icon solid fa-home">Ljubljana, Slovenia</li>
+                </ul>
+            </section>
+            <footer id="footer">
+                <p class="copyright">&copy; 2026 Vili Tajnic.</p>
+            </footer>
+        </div>
+    </div>
+</div>
+<script src="./static/assets/js/jquery.min.js"></script>
+<script src="./static/assets/js/browser.min.js"></script>
+<script src="./static/assets/js/breakpoints.min.js"></script>
+<script src="./static/assets/js/util.js"></script>
+<script src="./static/assets/js/main.js"></script>
+</body>
+</html>
