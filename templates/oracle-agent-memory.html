@@ -22,7 +22,7 @@
             <section>
                 <header class="main">
                     <h1>006 — Oracle 26ai as Durable Memory for OpenClaw Agents</h1>
-                    <p>A local-first case study: using <strong>Oracle AI Database 26ai Free</strong> as the durable memory store for OpenClaw agents, while keeping OpenClaw's existing <code>memory_search</code> experience working. In the rest of the article I use the shorter phrase <strong>Oracle 26ai Free</strong>.</p>
+                    <p>A local-first case study: using <strong>Oracle AI Database 26ai Free</strong> as the durable memory store for OpenClaw agents, while keeping OpenClaw's existing <code>memory_search</code> experience working.</p>
                 </header>
                 <span class="image main"><img src="./static/assets/images/Image_w6.jpg" alt="" /></span>
 
@@ -157,7 +157,6 @@ fetch  first 10 rows only;</code></pre>
                     <li>Durable memory lives in Oracle.</li>
                     <li>All agents share the same database user (<code>CLAW</code>) — this is a single-user test system.</li>
                     <li>No secrets are stored in git.</li>
-                    <li>No passwords are printed in blog snippets.</li>
                     <li>OpenClaw memory search keeps working without a custom backend.</li>
                 </ul>
                 <p>The main constraint is OpenClaw's existing memory model. OpenClaw indexes Markdown files (<code>MEMORY.md</code>, <code>memory/*.md</code>, and nested files under <code>memory/</code>). A full Oracle-backed OpenClaw memory provider would be cleaner long term, but it is a bigger integration project. For this experiment, the pragmatic solution is:</p>
